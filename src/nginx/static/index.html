@@ -1,22 +1,71 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="UTF-8">
-	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Transcendence</title>
-	<link rel="stylesheet" href="./css/main.css">
-    <script type="importmap">
-        {
-          "imports": {
-            "three": "https://cdn.jsdelivr.net/npm/three@v0.170.0/build/three.module.js",
-            "three/addons/": "https://cdn.jsdelivr.net/npm/three@v0.170.0/examples/jsm/"
-          }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Game</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
         }
-    </script>
+        #game-area {
+            width: 300px;
+            height: 500px;
+            border: 2px solid #000;
+            position: relative;
+            overflow: hidden;
+        }
+        #block {
+            width: 50px;
+            height: 50px;
+            background-color: red;
+            position: absolute;
+            top: 200px; /* Initial position */
+            left: 125px; /* Center horizontally */
+        }
+    </style>
 </head>
 <body>
-	<canvas id="three-canvas"></canvas>
-  <script type="module" src="./js/main.js"></script>
+    <div id="game-area">
+        <div id="block"></div>
+    </div>
+
+    <script>
+        const block = document.getElementById('block');
+        const apiUrl = '/test/move'; // Backend API route proxied by NGINX
+
+        // Function to send movement to the backend
+        async function sendMove(direction) {
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ direction }),
+                });
+                const data = await response.json();
+                // Update block's position based on the backend's response
+                if (data.newPosition) {
+                    block.style.top = `${data.newPosition}px`;
+                }
+            } catch (error) {
+                console.error('Error communicating with the backend:', error);
+            }
+        }
+
+        // Event listener for key presses
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'ArrowUp') {
+                sendMove('up');
+            } else if (event.key === 'ArrowDown') {
+                sendMove('down');
+            }
+        });
+    </script>
 </body>
 </html>
