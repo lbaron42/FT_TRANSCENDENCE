@@ -1,5 +1,5 @@
 """
-ASGI config for mysite project.
+ASGI config for learning project.
 
 It exposes the ASGI callable as a module-level variable named ``application``.
 
@@ -8,15 +8,19 @@ https://docs.djangoproject.com/en/5.1/howto/deployment/asgi/
 """
 
 import os
+
 from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
+import playground.routing
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'mysite.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'learning.settings')
 
 application = ProtocolTypeRouter({
-    "http": get_asgi_application(),  # Regular web stuff goes to Django
-    "websocket": AuthMiddlewareStack(  # WebSocket stuff goes here
-        URLRouter(["/gameplay"])  # Placeholder for WebSocket URLs
-    ),
+	'http':get_asgi_application(),
+	'websocket':AuthMiddlewareStack(
+		URLRouter(
+			playground.routing.websocket_urlpatterns
+		)
+	)
 })

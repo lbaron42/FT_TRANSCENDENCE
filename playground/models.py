@@ -1,3 +1,3 @@
 from django.db import models
 
-# your_app/consumers.py
+# Create your models here.

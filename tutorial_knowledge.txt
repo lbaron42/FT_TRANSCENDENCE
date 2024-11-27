@@ -1,0 +1,65 @@
+Front end: loaded on client- displayed
+Back end: runs on server- not displayed
+
+URL - location of something on the internet
+
+Internet communication is HTTP (can be changed through upgrade requests)
+
+responses can be html or just data
+
+data is made into html on the client by react, angular or, vue
+and is not the same as django
+
+django is server
+django has different endpoints, together they are a API
+
+manage.py -> wrapper around django-admin that taked settings into account
+
+__init__.py -> defines directory as django package
+settings.py -> define Django module settings
+url.py -> defines URLs of the module
+	defines what urls go where, can use the include() function to direct to apps
+	can be used in apps
+	need urlpatterns list []
+		urlpatterns contain path('string', reference to function),
+	
+wsgi and asgi -> used for deployment
+
+a django project is like a app 
+django has apps builting ( admin, auth, contettypes,sessions (legacy),meassages, staticfiles)
+each app gives some functionality
+
+in apps:
+migrations folder -> generate database tables
+admin.py -> defines admin interface
+apps.py -> configures this app (config)
+models.py -> define model classes (to pull data from databases, to present to user)
+test.py -> contains unit tests
+
+views.py -> contains request handlers (no templates or html)
+	view functions take request, and give response.
+	view functions need to be mapped to a URL
+
+
+Apps need to be registered in settings.py
+
+
+debugger in vs code:
+	run and debug
+	create lauch.json
+	click python(reccomendet)
+	django
+
+
+
+
+https://www.youtube.com/watch?v=cw8-KFVXpTE
+
+channels
+	channels is a django app, put it into installed apps.
+	needs routing configuration (in asgi.py)
+	need to point channels to root routing config (in settings.py)
+
+consumers
+	in channles consumers are what views are in normal django
+	consumers need routing in a file (routing.py), use(re_path)

@@ -1,2 +1,5 @@
 #ignore Nicos Virtual Python env
 TrancencendeceVirtualPythonEnv
+
+#ingnore .vscode folder
+.vscode
