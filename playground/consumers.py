@@ -2,7 +2,6 @@ from channels.generic.websocket import WebsocketConsumer
 
 import pygame, sys, time
 
-
 class PongGame(WebsocketConsumer):
 
 	def connect(self):
@@ -22,22 +21,12 @@ class PongGame(WebsocketConsumer):
 
 		print(f"Received from client: {text_data}")
 
+		#initiate pong game on button press here
+
 		if text_data == "PONG":
 			print("got PONG!")
 			self.pong()
 
-	def run_function(self, params):
-		# Example backend function logic
-		value = params.get('value', 0)
-		return f"Function executed with value: {value}"
-
-
-	def send_stream_data(self):
-		# This sends a continuous stream of data to the client
-
-		#Run pong game here
-
-		self.pong(self)
 
 	def pong(self):
 		pygame.init()
@@ -62,7 +51,7 @@ class PongGame(WebsocketConsumer):
 		paddleL = pygame.Rect(0,0,paddle_width,paddle_heigth)
 		paddleR = pygame.Rect(0,0,paddle_width,paddle_heigth)
 
-		print(ball.size)
+		#print(ball.size)
 
 		paddleR.centery = screen_height/2
 		paddleR.centerx = screen_width - paddle_width
@@ -232,7 +221,7 @@ class PongGame(WebsocketConsumer):
 			nonce = int(time.time() * 1000) - start
 			gamestate[0] = nonce
 
-			print(nonce )
+			#print(nonce )
 
 			pygame.display.update()
 			clock.tick(speed)

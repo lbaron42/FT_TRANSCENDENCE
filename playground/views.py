@@ -14,4 +14,4 @@ def say_hello(request):
 	return HttpResponse('Hello World')
 
 def test(request):
-	return render(request, './rest.html')
+	return render(request, './hihi/pongDplay.html')
