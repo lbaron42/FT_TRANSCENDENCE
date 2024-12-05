@@ -4,3 +4,6 @@ TrancencendeceVirtualPythonEnv
 #ingnore .vscode folder
 .vscode
 .vscode/
+
+#ignore shared memory file
+input

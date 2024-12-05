@@ -1,14 +1,28 @@
 from channels.generic.websocket import WebsocketConsumer
 
-import pygame, sys, time
+from multiprocessing.shared_memory import SharedMemory
+
+from channels.db import database_sync_to_async
+from asgiref.sync import async_to_sync
+
+import sys, time, threading ,mmap, os
 
 class PongGame(WebsocketConsumer):
+
+	sharedMemSize = 100
 
 	def connect(self):
 		# This is called when the WebSocket connection is first made
 		self.accept()  # Accept the connection from the client
-		self.send(text_data="connected!")
 		self.streaming = True  # Start streaming data
+
+		self.inputData = os.open('input', os.O_RDWR | os.O_CREAT)
+		os.ftruncate(self.inputData, self.sharedMemSize)
+		os.write(self.inputData, b'\x00' * self.sharedMemSize)
+
+		self.WriteToInputData = mmap.mmap(self.inputData, self.sharedMemSize, access=mmap.ACCESS_WRITE)
+		self.ReadFromInputData = mmap.mmap(self.inputData, self.sharedMemSize, access=mmap.ACCESS_READ)
+
 
 	def disconnect(self, close_code):
 		# This is called when the WebSocket connection is closed
@@ -17,217 +31,194 @@ class PongGame(WebsocketConsumer):
 	def receive(self, text_data):
 		# This is called when the server receives data from the client
 
-		#recieve paddle imput here
-
-		print(f"Received from client: {text_data}")
-
 		#initiate pong game on button press here
-
 		if text_data == "PONG":
 			print("got PONG!")
-			self.pong()
+			text_data = "0,0"
+			self.gameThread = threading.Thread(target= self.pong)
+			self.gameThread.daemon = True
+			self.gameThread.start()
+
+		self.WriteToInputData[0:len(text_data)] = text_data.encode()
+
+	pongot = 0
+
+	#arbirary base values
+	screen_width = 1000
+	screen_height = screen_width / 2
+
+	#game element sizes
+	paddle_width = screen_width/100*0.1
+	paddle_heigth = screen_height/100*20
+	ball_sizex = screen_width/100*1
+	ball_sizey = screen_height/100*2
+
+	#game element location variables
+	ball = [0,0]
+	paddleL = 0
+	paddleR = 0
+
+	#ball speed reset value
+	ball_start_speedx = 2
+	ball_start_speedy = 2
+
+	#used ball speed value (gets calculated while playing)
+	ball_speedX = ball_start_speedx
+	ball_speedY = ball_start_speedy
+
+	#ball speed increase value
+	ball_bounce_mult = 1.52
+
+	#passes (used to calculate when to speed up ball)
+	passes = 0
+	
+	#used paddle speed value (gets calculated while playing)
+	paddleL_speed = 0
+	paddleR_speed = 0
+
+	#Scores
+	Lscore = 0
+	Rscore = 0
+
+	#gamestate frames
+	#gamestate: nonce, paddleL.y, paddleR.y, ball.x, ball.y, Lscore, Rscore
+	gamestate = [None] * 7
+	gamestate[5] = Lscore
+	gamestate[6] = Rscore
+
+	#replat setup
+	log = open("gamedata.txt", "w")
+
+	#nonce calculation
+	start = int(time.time() * 1000)
+	nonce = int(time.time() * 1000) - start
+
 
 
 	def pong(self):
-		pygame.init()
 
-		#arbirary base values
-		screen_width = 1000
-		screen_height = screen_width / 2
+		#set timing clock rate for game logic
+		tickrate = 1/120
+		iterationStartT = time.time()
 
-		#create screen (needs to be handeled by fontend eventually)
-		screen = pygame.display.set_mode((screen_width, screen_height))
-		pygame.display.set_caption("game")
+		while (self.streaming):
 
-		#set timing clock for game logic
-		clock = pygame.time.Clock()
-		
-		paddle_width = screen_width/100*0.1
-		paddle_heigth = screen_height/100*20
-		ball_sizex = screen_width/100*1
-		ball_sizey = screen_height/100*2
+			#gameclock logic
+			duration = time.time() - iterationStartT
+			sleeptime = tickrate-duration
+			if sleeptime > 0:
+				time.sleep(sleeptime)
+			iterationStartT = time.time()
 
-		ball = pygame.Rect(0,0,ball_sizex,ball_sizey)
-		paddleL = pygame.Rect(0,0,paddle_width,paddle_heigth)
-		paddleR = pygame.Rect(0,0,paddle_width,paddle_heigth)
+			#increase ball speed in x direction every two passes
+			if self.passes > 0 and self.passes % 2 == 0:
+				self.ball_speedX += 1
+				self.passes = 0
 
-		#print(ball.size)
-
-		paddleR.centery = screen_height/2
-		paddleR.centerx = screen_width - paddle_width
-
-		paddleL.centery = screen_height/2
-		paddleL.centerx = 0 + paddle_width
-
-		ball.center = (screen_width/2,screen_height/2)
-
-		ball_start_speedx = 2
-		ball_start_speedy = 2
-
-		ball_speedX = 0
-		ball_speedY = 0
-		ball_bounce_mult = 1.52
-		paddleL_speed = 0
-		paddleR_speed = 0
-
-		Lscore = 0
-		Rscore = 0
-
-		gamestate = [None] * 7
-		gamestate[5] = Lscore
-		gamestate[6] = Rscore
-		#gamestate: nonce, paddleL.y, paddleR.y, ball.x, ball.y, Lscore, Rscore
-
-		log = open("gamedata.txt", "w")
-
-		last_ball_speed = 0
-		last_paddleR_speed = 0
-
-		ball_speedX = ball_start_speedx
-		ball_speedY = ball_start_speedy
-
-		passes = 0
-
-		start = int(time.time() * 1000)
-
-		nonce = int(time.time() * 1000) - start
-
-		hitnbr = 0
-		speed = 120
-
-		while self.streaming:
-			if passes > 0 and passes % 2 == 0:
-				ball_speedX += 1
-				passes = 0
-			#check for events (not sure how to get that from the frontend in the end)
-			for event in pygame.event.get():
-				if event.type == pygame.QUIT:
-					pygame.quit()
-					sys.exit()
-				if event.type == pygame.KEYDOWN:
-					if event.key == pygame.K_UP:
-						paddleR_speed = -6
-					if event.key == pygame.K_DOWN:
-						paddleR_speed = 6
-					if event.key == pygame.K_w:
-						paddleL_speed = -6
-					if event.key == pygame.K_s:
-						paddleL_speed = 6
-					if event.key == pygame.K_l:
-						paddleR.y -= 1
-					if event.key == pygame.K_o:
-						paddleR.y += 1
-					if event.key == pygame.K_t:
-						speed = 6
-					if event.key == pygame.K_y:
-						speed = 120
-				if event.type == pygame.KEYUP:
-					if event.key == pygame.K_UP or event.key == pygame.K_DOWN:
-						paddleR_speed = 0
-				if event.type == pygame.KEYUP:
-					if event.key == pygame.K_w or event.key == pygame.K_s:
-						paddleL_speed = 0
-
+			#check for events from fontend
+			input = self.ReadFromInputData[0:3].decode().split(',')
+			if (len(input) >= 2) :
+				if input[0] == '0':
+					self.paddleL_speed = 0
+				if input[0] == '1':
+					self.paddleL_speed = -6
+				if input[0] == '2':
+					self.paddleL_speed = 6
+				if input[1] == '0':
+					self.paddleR_speed = 0
+				if input[1] == '1':
+					self.paddleR_speed = -6
+				if input[1] == '2':
+					self.paddleR_speed = 6
 
 			#move ball
-			ball.x += ball_speedX
-			ball.y += ball_speedY
-			
+			self.ball[0] += self.ball_speedX
+			self.ball[1] += self.ball_speedY
+
 			#make sure data stays inside playing field
-			if ball.y < 0:
-				ball.y = 0
+			if self.ball[1] < 0:
+				self.ball[1] = 0
 
-			if ball.y > screen_height:
-				ball.y = screen_height
-
-			#write ball location to gamedata
+			if self.ball[1] > self.screen_height:
+				self.ball[1] = self.screen_height
 
 			#move left paddle
-			paddleL.y += paddleL_speed
-			#safety against moving and being out of bounds
+			self.paddleL += self.paddleL_speed
 
-			if paddleL.y >= screen_height - paddle_heigth or paddleL.y <= 0:
+			#safety against moving and being out of bounds
+			if self.paddleL >= self.screen_height - self.paddle_heigth or self.paddleL <= 0:
 				paddleL_speed = 0
-			if paddleL.y > screen_height-paddle_heigth:
-				paddleL.y = screen_height-paddle_heigth
-			if paddleL.y < 0:
-				paddleL.y = 0
+			if self.paddleL > self.screen_height - self.paddle_heigth:
+				self.paddleL = self.screen_height - self.paddle_heigth
+			if self.paddleL < 0:
+				self.paddleL = 0
 
 			#move right paddle
-			paddleR.y += paddleR_speed
+			self.paddleR += self.paddleR_speed
 
 			#safety against moving and being out of bounds
-			if paddleR.y >= screen_height - paddle_heigth or paddleR.y <= 0:
-				paddleR_speed = 0
-			if paddleR.y > screen_height-paddle_heigth:
-				paddleR.y = screen_height-paddle_heigth
-			if paddleR.y < 0:
-				paddleR.y = 0
+			if self.paddleR >= self.screen_height - self.paddle_heigth or self.paddleR <= 0:
+				self.paddleR_speed = 0
+			if self.paddleR > self.screen_height - self.paddle_heigth:
+				self.paddleR = self.screen_height - self.paddle_heigth
+			if self.paddleR < 0:
+				self.paddleR = 0
 
-
-			gamestate[1] = paddleL.y
-			gamestate[2] = paddleR.y
-			gamestate[3] = ball.x
-			if gamestate[3] < 0:
-				gamestate[3] = 0
-			if gamestate[3] > screen_width:
-				gamestate[3] = screen_width
-			gamestate[4] = ball.y
+			#fill gamestate data (this is sent to frontend and saved)
+			self.gamestate[1] = int(self.paddleL)
+			self.gamestate[2] = int(self.paddleR)
+			self.gamestate[3] = int(self.ball[0])
+			#correct impossible ball locations for frontend
+			if self.gamestate[3] < 0:
+				self.gamestate[3] = 0
+			if self.gamestate[3] > self.screen_width:
+				self.gamestate[3] = self.screen_width
+			self.gamestate[4] = int(self.ball[1])
 
 			#make ball bounce on paddles
 			#Left Paddle
-			if(ball.x < 0 + paddle_width and (ball.y >= paddleL.y - ball_sizey and ball.y <= paddleL.y + paddle_heigth)):
-				ball.x = 0 + paddle_width
-				passes += 1
-				if paddleL_speed > 0:
-					ball_speedY += ball_bounce_mult
-				if paddleL_speed < 0:
-					ball_speedY -= ball_bounce_mult
-				ball_speedX *= -1
-			#Right Paddle
-			if(ball.x > screen_width - paddle_width - ball_sizex and (ball.y + ball_sizex >= paddleR.y and ball.y <= paddleR.y + paddle_heigth)):
-				ball.x = screen_width - paddle_width - ball_sizex
-				passes += 1
-				if paddleR_speed > 0:
-					ball_speedY += ball_bounce_mult
-				if paddleR_speed < 0:
-					ball_speedY -= ball_bounce_mult
-				ball_speedX *= -1
+			if(self.ball[0] < 0 + self.paddle_width and (self.ball[1] >= self.paddleL - self.ball_sizey and self.ball[1] <= self.paddleL + self.paddle_heigth)):
+				self.ball[0] = 0 + self.paddle_width
+				self.passes += 1
+				if self.paddleL_speed > 0:
+					self.ball_speedY += self.ball_bounce_mult
+				if self.paddleL_speed < 0:
+					self.ball_speedY -= self.ball_bounce_mult
+				self.ball_speedX *= -1
+			#Right Paddle 
+			if(self.ball[0] > self.screen_width - self.paddle_width - self.ball_sizex and (self.ball[1] + self.ball_sizex >= self.paddleR and self.ball[1] <= self.paddleR + self.paddle_heigth)):
+				self.ball[0] = self.screen_width - self.paddle_width - self.ball_sizex
+				self.passes += 1
+				if self.paddleR_speed > 0:
+					self.ball_speedY += self.ball_bounce_mult
+				if self.paddleR_speed < 0:
+					self.ball_speedY -= self.ball_bounce_mult
+				self.ball_speedX *= -1
 
 			#make ball bounce on top and bottom
-			if ball.y <= 0 or ball.y >= screen_height - ball_sizey:
-				ball_speedY *= -1
+			if self.ball[1] <= 0 or self.ball[1] >= self.screen_height - self.ball_sizey:
+				self.ball_speedY *= -1
+
 			#make ball reset if i leaves screen on x axis
-			if ball.x > screen_width - ball_sizex or ball.x < 0:
-				print("score!")
-			if ball.x > screen_width - ball_sizex:
-				Lscore += 1
-				gamestate[5] = Lscore
-				ball_speedX = ball_start_speedx
-				print(Lscore)
-				ball.x = screen_width/2
-				ball.y = screen_height/2
-				ball_speedY = ball_start_speedy
-			if (ball.x < 0):
-				Rscore += 1
-				gamestate[6] = Rscore
-				ball_speedX = -ball_start_speedx
-				print(Rscore)
-				ball.x = screen_width/2
-				ball.y = screen_height/2
-				ball_speedY = ball_start_speedy
+			if self.ball[0] > self.screen_width - self.ball_sizex:
+				self.Lscore += 1
+				self.gamestate[5] = self.Lscore
+				self.ball_speedX = self.ball_start_speedx
+				self.ball[0] = self.screen_width/2
+				self.ball[1] = self.screen_height/2
+				self.ball_speedY = self.ball_start_speedy
+			if (self.ball[0] < 0):
+				self.Rscore += 1
+				self.gamestate[6] = self.Rscore
+				self.ball_speedX = - self.ball_start_speedx
+				self.ball[0] = self.screen_width/2
+				self.ball[1] = self.screen_height/2
+				self.ball_speedY = self.ball_start_speedy
 
-		#update screen (frontend will have to handle that eventually)
-			nonce = int(time.time() * 1000) - start
-			gamestate[0] = nonce
+			#update nonce
+			nonce = int(time.time() * 1000) - self.start
+			self.gamestate[0] = nonce
 
-			#print(nonce )
-
-			pygame.display.update()
-			clock.tick(speed)
-			screen.fill("black")
-			pygame.draw.rect(screen,'white',ball)
-			pygame.draw.rect(screen,'white',paddleL)
-			pygame.draw.rect(screen,'white',paddleR)
-			log.write(' '.join(str(x) for x in gamestate) + "\n")
-			self.send(text_data= ' '.join(str(x) for x in gamestate) + "\n")  # Send data to client
+			#write gamestate and send gamestate to frontend
+			self.log.write(' '.join(str(x) for x in self.gamestate) + "\n")
+			async_to_sync((self.send)(text_data= ' '.join(str(x) for x in self.gamestate) + "\n"))  # Send data to client

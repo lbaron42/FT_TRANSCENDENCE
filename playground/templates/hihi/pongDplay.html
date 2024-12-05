@@ -94,9 +94,41 @@
             updateGameState(frame); // Update the game state
         };
 
+        let player1Action = 0; // 0: Not Moving, 1: Moving Up, 2: Moving Down
+        let player2Action = 0; // 0: Not Moving, 1: Moving Up, 2: Moving Down
+		playerActions = [0,0]
+
+        // Handle keydown events for player inputs
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'w') {
+				playerActions[0] = 1;
+                testSocket.send(playerActions); // Player 1 moving up
+            } else if (event.key === 's') { 
+				playerActions[0] = 2;
+                testSocket.send(playerActions); // Player 1 moving down
+            } else if (event.key === 'ArrowUp') {
+				playerActions[1] = 1;
+                testSocket.send(playerActions); // Player 2 moving up
+            } else if (event.key === 'ArrowDown') {
+				playerActions[1] = 2;
+				testSocket.send(playerActions); // Player 2 moving down
+            }
+        });
+
+        // Handle keyup events to stop movement
+        document.addEventListener('keyup', function(event) {
+            if (event.key === 'w' || event.key === 's') {
+				playerActions[0] = 0;
+                testSocket.send(playerActions); // Player 1 stops moving
+            } else if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+				playerActions[1] = 0;
+                testSocket.send(playerActions); // Player 2 stops moving
+            }
+        });
+
         // Button click to trigger a function on the backend
         document.getElementById('runFunctionBtn').addEventListener('click', function() {
-            const message = 'PONG'; // Example message
+            const message = 'PONG'; // Example message to trigger backend functionality
             testSocket.send(message);
         });
     </script>
