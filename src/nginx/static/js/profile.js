@@ -2,6 +2,7 @@ import { getCSRFToken, logout} from './auth.js';
 
 document.addEventListener('DOMContentLoaded', function() {
     fetchProfileData();
+	fetchMatchHistory();
     document.getElementById('logout-button').addEventListener('click', logout);
     document.getElementById('settings-button').addEventListener('click', function() {
         window.location.href = 'update-profile.html';
@@ -35,13 +36,15 @@ function fetchProfileData() {
     .then(data => {
         document.getElementById('username').textContent = data.user.username;
         document.getElementById('display-name').textContent = data.display_name;
-        document.getElementById('wins').textContent = data.stats.wins;
-        document.getElementById('losses').textContent = data.stats.losses;
+        document.getElementById('wins').textContent = data.stats["games-wins"];
+        document.getElementById('losses').textContent = data.stats["games-losses"];
+		document.getElementById('draws').textContent = data.stats["games-draws"];
+		document.getElementById('ranking-score').textContent = data.stats["ranking-score"];
+		document.getElementById('games-played').textContent = data.stats["games-played"];
         if (data.avatar) {
             document.getElementById('avatar').src = data.avatar;
         }
         updateFriendsList(data.friends);
-        updateMatchHistory(data.match_history);
     })
     .catch(error => {
         console.error('Error fetching profile data:', error);
@@ -59,19 +62,76 @@ function updateFriendsList(friends) {
     });
 }
 
-function updateMatchHistory(matches) {
-    const matchHistoryBody = document.getElementById('match-history-body');
-    matchHistoryBody.innerHTML = '';
-    matches.forEach(match => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${new Date(match.date).toLocaleDateString()}</td>
-            <td>${match.opponent}</td>
-            <td>${match.result}</td>
-            <td>${match.score}</td>
-        `;
-        matchHistoryBody.appendChild(row);
-    });
+function getGameStatus(score, playerIdx){
+	const gameStatusCell = document.createElement('td');
+	const opponentIdx = (playerIdx + 1) % 2;
+	if (score[playerIdx] == score[opponentIdx]){
+		gameStatusCell.textContent = 'Draw';
+		gameStatusCell.style.color = 'yellow';
+	} else if (score[playerIdx] > score[opponentIdx]){
+		gameStatusCell.textContent = 'Win';
+		gameStatusCell.style.color = 'green';
+	} else {
+		gameStatusCell.textContent = 'Lost';
+		gameStatusCell.style.color = 'red';
+	}
+	return (gameStatusCell);
+}
+
+async function fetchMatchHistory() {
+	const tableBody = document.getElementById('match-history-body');
+	try {
+	const response = await fetch('/user-api/game-history?' + 
+		new URLSearchParams({limit: '10'}).toString(),{
+			method: 'GET',
+			headers: {
+                'Content-Type': 'application/json',
+				'X-CSRFToken': getCSRFToken()
+            },
+			credentials: 'include',
+		});
+		if (!response.ok) {
+            console.error('Failed to fetch match history:', response.status);
+            return;
+        }
+		const json = await response.json();
+		const games = json.results;
+		tableBody.innerHTML = '';
+		games.forEach(game => {
+			const row = document.createElement('tr');
+
+			const dateCell = document.createElement('td');
+			dateCell.textContent = new Date(game.dateTime).toLocaleString();
+			row.appendChild(dateCell);
+
+			const gameModeCell = document.createElement('td');
+			gameModeCell.textContent = game.gameMode;
+			row.appendChild(gameModeCell);
+
+			const opponentCell = document.createElement('td');
+			const scoreCell = document.createElement('td');
+			let gameStatusCell;
+			const username = document.getElementById('username').textContent;
+			if (game.players[0] == username){
+				opponentCell.textContent = game.players[1];
+				scoreCell.textContent = game.score[0].toString() + '-' + game.score[1].toString();
+				gameStatusCell = getGameStatus(game.score, 0);
+			} else if (game.players[1] == username) {
+				opponentCell.textContent = game.players[0];
+				scoreCell.textContent = game.score[1].toString() + '-' + game.score[0].toString();
+				gameStatusCell = getGameStatus(game.score, 1);
+			} else {
+				console.error(`Game with id ${game.id} can\'t be connected to current user: ${username}. PLAYERS: ${game.players[0]}, ${game.players[1]}`);
+			}
+			row.appendChild(opponentCell);
+			row.appendChild(scoreCell);
+			row.appendChild(gameStatusCell);
+
+			tableBody.appendChild(row);
+		})
+	} catch (error) {
+		console.error(error.message);
+	}
 }
 
 function uploadAvatar(event) {

@@ -12,11 +12,8 @@ ENV PYTHONUNBUFFERED 1
 RUN apt-get update && \
     apt-get install -y --no-install-recommends gcc
 
-# lint
 RUN pip install --upgrade pip
-RUN pip install flake8==6.0.0
-COPY . /usr/src/app/
-##RUN flake8 --ignore=E501,F401 .
+COPY . /usr/src/app/.
 
 # install python dependencies
 COPY ./requirements.txt .
@@ -50,7 +47,7 @@ COPY --from=builder /usr/src/app/requirements.txt .
 RUN pip install --upgrade pip
 RUN pip install --no-cache /wheels/*
 
-# copy entrypoint.prod.sh
+# copy entrypoint.sh
 COPY ./entrypoint.sh .
 RUN sed -i 's/\r$//g'  $APP_HOME/entrypoint.sh
 RUN chmod +x  $APP_HOME/entrypoint.sh
@@ -64,5 +61,7 @@ RUN chown -R app:app $APP_HOME
 # change to the app user
 USER app
 
-# run entrypoint.prod.sh
+# run entrypoint.sh
 ENTRYPOINT ["/home/app/web/entrypoint.sh"]
+
+CMD exec gunicorn app.wsgi:application --bind 0.0.0.0:${USERDATA_PORT} --access-logfile -

@@ -1,14 +1,24 @@
 from django.db import models
+from user_management.models import Profile
+from django.utils.timezone import now
+import logging
 
 class GameData(models.Model):
-    # game modes are 'single-player' or 'multi-player'
-    gameMode = models.CharField(max_length=10)
-    player1 = models.CharField(max_length=50)
-    player2 = models.CharField(max_length=50)
-    # score for example '1-12' 
-    score = models.CharField(max_length=20)
-    dateTime = models.DateTimeField()
-    
-    def __str__(self):
-        return (str(self.dateTime) + ':' + str(self.player1) + ' vs. ' 
-                + str(self.player2) + ', score: ' + str(self.score))
+	GAME_MODES = [
+		('two-player-pong', 'Pong'),
+		('pac-pong', 'PacPong')
+	]
+	gameMode = models.CharField(max_length=30, choices=GAME_MODES)
+	players = models.ManyToManyField(Profile, related_name="games")
+	gameFinished = models.BooleanField(default=True)
+	score = models.JSONField(default=list)
+	dateTime = models.DateTimeField(default=now)
+
+	class Meta:
+		ordering = ['-dateTime']
+	
+	def __str__(self):
+		player_names = [player.user.username for player in self.players.all()]
+		score_strings = [str(points)  for points in self.score]
+		return (str(self.dateTime) + ':' + 'players:' + ", ".join(player_names) + 
+				'\tscore: ' + "-".join(score_strings))

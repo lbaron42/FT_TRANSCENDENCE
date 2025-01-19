@@ -92,12 +92,10 @@ services:
     build:
       context: ./userdata/
       dockerfile: Dockerfile
-    command: >
-      sh -c "python manage.py makemigrations &&
-           python manage.py migrate &&
-           gunicorn app.wsgi:application --bind 0.0.0.0:${USERDATA_PORT}"
     expose:
       - ${USERDATA_PORT}
+    environment:
+      - USERDATA_PORT=${USERDATA_PORT}
     env_file:
       - ./userdata/.env
     depends_on:
