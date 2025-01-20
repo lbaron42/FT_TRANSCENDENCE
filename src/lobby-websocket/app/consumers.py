@@ -1,14 +1,17 @@
 from channels.generic.websocket import AsyncWebsocketConsumer
 import json
 import httpx
+import logging
+logger = logging.getLogger(__name__)
 
 class LobbyConsumer(AsyncWebsocketConsumer):
 
     async def connect(self):
         self.lobby_id = self.scope['url_route']['kwargs']['lobby_id']
+        self.pac_pong = self.scope['url_route']['kwargs']['pac_pong']
         self.user_name = self.scope["url_route"]["kwargs"]["user_name"]
         self.lobby_group_name = f"lobby_{self.lobby_id}"
-        self.roles = {"p1": None, "p2": None}
+        self.roles = {"p1": None, "p2": None, "p3": None}
 
         await self.channel_layer.group_add(
             self.lobby_group_name,
@@ -51,6 +54,10 @@ class LobbyConsumer(AsyncWebsocketConsumer):
             await self.assign_role('p2')
         elif action == 'p2_deselect':
             await self.unassign_role('p2')
+        elif action == 'p3_select':
+            await self.assign_role('p3')
+        elif action == 'p3_deselect':
+            await self.unassign_role('p3')
         elif action == 'init_player_roles':
             await self.init_player_roles()
         elif action == 'start_game':
@@ -61,7 +68,12 @@ class LobbyConsumer(AsyncWebsocketConsumer):
                     'message': 'ok'
                 }
             )
-        if self.roles['p1'] != "None" and self.roles['p2'] != "None":
+        logger.debug("self.pac_pong: " + self.pac_pong)
+        logger.debug("self.roles['p3']: " +self.roles['p3'])
+        logger.debug("self.roles['p2']: " +self.roles['p2'])
+        logger.debug("self.roles['p1']: " +self.roles['p1'])
+
+        if (self.pac_pong == 'false' or (self.pac_pong == 'true' and self.roles['p3'] != "None")) and self.roles['p1'] != "None" and self.roles['p2'] != "None":
             await self.channel_layer.group_send(
                 self.lobby_group_name,
                 {

@@ -58,17 +58,32 @@
               <input type="text" id="lobby-name" name="lobby_name" required>
             </div>
             <div>
-              <label for="mode-options"></label>
               <div id="mode-options">
                 <label class="score-option">
                   <input type="radio" name="mode" value="1" checked>
                   <span>local</span>
                 </label>
                 <label class="score-option">
-                  <input type="radio" name="mode" value="2" checked>
+                  <input type="radio" name="mode" value="2">
                   <span>online</span>
                 </label>
               </div>
+            </div>
+            <div>
+              <div id="pong-modes">
+                <label class="score-option">
+                  <input type="radio" name="pong-mode" value="0" checked>
+                  <span>Pong</span>
+                </label>
+                <label class="score-option">
+                  <input type="radio" name="pong-mode" value="1">
+                  <span>PacPong</span>
+                </label>
+              </div>
+            </div>
+            <div>
+              <label for="tournament-mode">Tournament Mode:</label>
+              <input type="checkbox" name="tornament-mode" id="tournament-mode">
             </div>
             <div>
               <label for="score-options">Score:</label>
@@ -97,6 +112,7 @@
             <h2 id="lobby-header">Lobby: </h2>
             <div>
               <button class="player_button" id="p1"><p>P1</p></button>
+              <button class="player_button" id="p3"><p>PacMan</p></button>
               <button class="player_button" id="p2"><p>P2</p></button>
             </div>
             <button class="start_button" id="start_game">Start Game</button>

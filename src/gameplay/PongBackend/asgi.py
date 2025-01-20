@@ -13,6 +13,7 @@ from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
 import Pong.routing
+import PacPong.routing
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'PongBackend.settings')
 
@@ -20,7 +21,7 @@ application = ProtocolTypeRouter({
 	'http':get_asgi_application(),
 	'websocket':AuthMiddlewareStack(
 		URLRouter(
-			Pong.routing.websocket_urlpatterns
+			Pong.routing.websocket_urlpatterns + PacPong.routing.websocket_urlpatterns
 		)
 	)
 })
