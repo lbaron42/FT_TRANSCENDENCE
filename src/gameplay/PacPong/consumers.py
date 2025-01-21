@@ -283,6 +283,7 @@ class PacPongGame(AsyncWebsocketConsumer):
 			pac_size=str(PAC_SIZE))
 		
 		tickrate = 1/120 * 1000
+		servertickrate = 1/240 * 1000
 		self.game_session.start = (time.time() * 1000)
 		self.game_session.nonce = (time.time() * 1000) - self.game_session.start
 		self.game_session.iterationStartT = (time.time() * 1000)
@@ -301,6 +302,10 @@ class PacPongGame(AsyncWebsocketConsumer):
 			#gameclock logic
 			delta_time = ((time.time() * 1000) - self.game_session.iterationStartT)
 			#print("frame took " + str(delta_time) + " ms")
+			#if delta_time < servertickrate:
+				#print("sleeping for" + str((servertickrate/1000)-delta_time))
+				#time.sleep(servertickrate - delta_time)
+				#delta_time = servertickrate
 			accumulatedTime += delta_time
 			#sleeptime = tickrate - delta_time
 			#if sleeptime > 0:
@@ -315,16 +320,16 @@ class PacPongGame(AsyncWebsocketConsumer):
 			#check for events from fontend
 			#paddles
 			with self.game_session.player_input_lock:
-				self.game_session.paddleL_speed = ((self.game_session.paddle_input[0][0] - self.game_session.paddle_input[0][1]) * self.game_session.paddle_speed) * delta_time
-				self.game_session.paddleR_speed = ((self.game_session.paddle_input[1][0] - self.game_session.paddle_input[1][1]) * self.game_session.paddle_speed) * delta_time
+				self.game_session.paddleL_speed = ((self.game_session.paddle_input[0][0] - self.game_session.paddle_input[0][1]) * self.game_session.paddle_speed)
+				self.game_session.paddleR_speed = ((self.game_session.paddle_input[1][0] - self.game_session.paddle_input[1][1]) * self.game_session.paddle_speed)
 			#pac
 				self.game_session.pac_speed = self.game_session.pac_start_speed
-				self.game_session.pac_speedx = (self.game_session.pac_input[1][0] - self.game_session.pac_input[1][1]) * self.game_session.pac_speed * delta_time
-				self.game_session.pac_speedy = (self.game_session.pac_input[0][0] - self.game_session.pac_input[0][1]) * self.game_session.pac_speed * delta_time
+				self.game_session.pac_speedx = (self.game_session.pac_input[1][0] - self.game_session.pac_input[1][1]) * self.game_session.pac_speed
+				self.game_session.pac_speedy = (self.game_session.pac_input[0][0] - self.game_session.pac_input[0][1]) * self.game_session.pac_speed
 
 			#move pac
-			self.game_session.pac[0] += self.game_session.pac_speedx
-			self.game_session.pac[1] += self.game_session.pac_speedy
+			self.game_session.pac[0] += self.game_session.pac_speedx * delta_time
+			self.game_session.pac[1] += self.game_session.pac_speedy * delta_time
 
 			#safety against pac moving and being out of bounds
 			if self.game_session.pac[1] < 0 + self.game_session.pac_size/2:
@@ -369,7 +374,7 @@ class PacPongGame(AsyncWebsocketConsumer):
 				self.game_session.ball[1] = self.game_session.screen_height
 
 			#move left paddle
-			self.game_session.paddleL += self.game_session.paddleL_speed
+			self.game_session.paddleL += self.game_session.paddleL_speed * delta_time
 
 			#safety against paddleL moving and being out of bounds
 			if self.game_session.paddleL >= self.game_session.screen_height - self.game_session.paddle_heigth or self.game_session.paddleL <= 0:
@@ -380,7 +385,7 @@ class PacPongGame(AsyncWebsocketConsumer):
 				self.game_session.paddleL = 0
 
 			#move right paddle
-			self.game_session.paddleR += self.game_session.paddleR_speed
+			self.game_session.paddleR += self.game_session.paddleR_speed * delta_time
 
 			#safety against PaddleR moving and being out of bounds
 			if self.game_session.paddleR >= self.game_session.screen_height - self.game_session.paddle_heigth or self.game_session.paddleR <= 0:
@@ -434,11 +439,12 @@ class PacPongGame(AsyncWebsocketConsumer):
 
 			#update nonce
 			self.game_session.nonce = (time.time() * 1000) - self.game_session.start
+			print(str(accumulatedTime) + "vs" + str(tickrate))
 			if (accumulatedTime >= tickrate):
 				ball3 = self.game_session.ball[0]
-				print("ball moved: " + str(ball3-ball4) + " units per tick")
+				#print("ball moved: " + str(ball3-ball4) + " units per tick")
 				ball4 = self.game_session.ball[0]
-				print("doing tick after " + str(accumulatedTime) + " ms (" + str(tickrate) + ")")
+				#print("doing tick after " + str(accumulatedTime) + " ms (" + str(tickrate) + ")")
 				accumulatedTime = 0
 				game_update_signal.send(sender=self, 
 						nonce=self.game_session.nonce, 
@@ -453,6 +459,7 @@ class PacPongGame(AsyncWebsocketConsumer):
 						pac_y=self.game_session.pac[1])
 
 				if self.game_session.Lscore >= self.max_score or self.game_session.Rscore >= self.max_score or self.game_session.Pscore >= self.max_score:
+					print("sending game end signal")
 					if self.max_player_count == 1:
 						self.game_session.streaming = False
 					self.game_session.end = True
