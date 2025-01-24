@@ -11,12 +11,15 @@ def create_lobby(request):
     if request.method == 'POST':
         name = request.POST.get('lobby_name')
         score = request.POST.get('score')
+        tournament_mode = request.POST.get('tournament_mode', 'false').lower() == 'true'
+        pac_pong = request.POST.get('pong-mode') == '1'
         mode = int(request.POST.get('mode'))
         cur_player = 0
         if (mode == 1):
             cur_player = 1
+        elif pac_pong:
+            mode = 3
         raw_password = request.POST.get('lobby_password', '')
-        print("name: " + name)
         auth_response = requests.get(
             "http://nginx:80/user-api/profile/",
             headers = {
@@ -30,13 +33,20 @@ def create_lobby(request):
             return JsonResponse({'error': 'Unauthorized user'}, status=401)
         
         try:
-            lobby = Lobby(name=name, max_score=score, max_player_count=mode, current_player_count=cur_player)
+            lobby = Lobby(
+                name=name,
+                max_score=score,
+                max_player_count=mode,
+                current_player_count=cur_player,
+                tournament_mode=tournament_mode,
+                pac_pong=pac_pong
+                )
             if raw_password:
                 lobby.set_password(raw_password)
             lobby.save()
 
             return JsonResponse(
-                {'message': 'Lobby created successfully!', 'lobby': lobby.id, 'lobby_name': lobby.name, 'max_score': lobby.max_score, 'max_player_count': lobby.max_player_count}, 
+                {'message': 'Lobby created successfully!', 'lobby': lobby.id, 'lobby_name': lobby.name, 'max_score': lobby.max_score, 'max_player_count': lobby.max_player_count, 'pac_pong': lobby.pac_pong}, 
                 status=201
             )        
         except IntegrityError:
@@ -64,6 +74,8 @@ def get_lobby(request, lobby_id):
                 'p2': lobby.p2,
                 'password_protected': bool(lobby.password),
                 'max_score': lobby.max_score,
+                'tournament_mode': lobby.tournament_mode,
+                'pac_pong': lobby.pac_pong,
             }
             return JsonResponse({'message': 'Lobby retrieved successfully', 'lobby': lobby_data}, status=200)
         except Lobby.DoesNotExist:
@@ -88,6 +100,8 @@ def all(request):
                 'p2': lobby.p2,
                 'password_protected': bool(lobby.password), 
                 'max_score': lobby.max_score,
+                'tournament_mode': lobby.tournament_mode,
+                'pac_pong': lobby.pac_pong,
             })
         return JsonResponse(lobby_list, safe=False)
     
@@ -97,9 +111,6 @@ def all(request):
     )
 
 def player_joined(request, lobby_id):
-    print(f"Received a POST request for lobby_id {lobby_id}")
-    print(f"Request method: {request.method}")
-    print(f"Request body: {request.body}")
     if request.method == "POST":
         try:
             lobby = Lobby.objects.get(id=lobby_id)
@@ -121,11 +132,14 @@ def player_left(request, lobby_id, user_name):
                 lobby.p1 = None
             if lobby.p2 == user_name:
                 lobby.p2 = None
+            if lobby.p3 == user_name:
+                lobby.p3 = None
             lobby.save()
             return JsonResponse({
             'roles': {
                 'p1': f'{lobby.p1}',
-                'p2': f'{lobby.p2}'
+                'p2': f'{lobby.p2}',
+                'p3': f'{lobby.p3}' 
             },
             'cur_player': lobby.current_player_count
             }, status=200)
@@ -144,39 +158,48 @@ def delete_lobby_entry(request, lobby_id):
     return JsonResponse({'error': 'Invalid method'}, status=405)
 
 def select_player(request, player, lobby_id, user_name):
-    if request.method == "POST" and player in ('p1', 'p2'):
-        print("player_entry in POST request and player: p1 or p2")
+    if request.method == "POST" and player in ('p1', 'p2', 'p3'):
         try:
             lobby = Lobby.objects.get(id=lobby_id)
         except Lobby.DoesNotExist:
             return JsonResponse({'error': 'Lobby not found'}, status=404)
-        if player == 'p1' and lobby.p2 == user_name:
-            lobby.p2 = None
-        elif player == 'p2' and lobby.p1 == user_name:
-            lobby.p1 = None
+        if player == 'p1':
+            if lobby.p2 == user_name:
+                lobby.p2 = None
+            elif lobby.p3 == user_name:
+                lobby.p3 = None
+        elif player == 'p2':
+            if lobby.p1 == user_name:
+                lobby.p1 = None
+            elif lobby.p3 == user_name:
+                lobby.p3 = None
+        elif player == 'p3':
+            if lobby.p1 == user_name:
+                lobby.p1 = None
+            elif lobby.p2 == user_name:
+                lobby.p2 = None
         setattr(lobby, player, user_name)
         lobby.save()
-        return JsonResponse({'p1': f'{lobby.p1}', 'p2': f'{lobby.p2}'}, status=200)
+        return JsonResponse({'p1': f'{lobby.p1}', 'p2': f'{lobby.p2}', 'p3': f'{lobby.p3}'}, status=200)
     return JsonResponse({'error': 'Invalid method or player'}, status=405)
 
 
 def desselect_player(request, player, lobby_id):
-    if request.method == "POST" and player in ('p1', 'p2'):
-        print("player_entry in POST request and player: p1 or p2")
+    if request.method == "POST" and player in ('p1', 'p2', 'p3'):
         try:
             lobby = Lobby.objects.get(id=lobby_id)
         except Lobby.DoesNotExist:
             return JsonResponse({'error': 'Lobby not found'}, status=404)
         setattr(lobby, player, "None")
         lobby.save()
-        return JsonResponse({'p1': f'{lobby.p1}', 'p2': f'{lobby.p2}'}, status=200)
+        return JsonResponse({'p1': f'{lobby.p1}', 'p2': f'{lobby.p2}', 'p3': f'{lobby.p3}'}, status=200)
     return JsonResponse({'error': 'Invalid method or player'}, status=405)
 
 def get_players(request, lobby_id):
     if request.method == "GET":
         try:
             lobby = Lobby.objects.get(id=lobby_id)
-            return JsonResponse({'p1': f'{lobby.p1}', 'p2': f'{lobby.p2}'}, status=200)
+            return JsonResponse({'p1': f'{lobby.p1}', 'p2': f'{lobby.p2}', 'p3': f'{lobby.p3}'}, status=200)
         except Lobby.DoesNotExist:
             return JsonResponse({'error': 'Lobby not found'}, status=404)
     return JsonResponse({'error': 'Invalid method'}, status=405)

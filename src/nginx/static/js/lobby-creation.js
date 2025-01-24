@@ -37,10 +37,14 @@ function createLobby(event)
       console.log('Raw response:', response);
       if(response.error)
         console.log('Error: ' + response.error);
+      else if(response.tournament_mode && response.max_player_count == 1)
+        joinLocalTournament(response.lobby, response.lobby_name, response.max_score, response.pac_pong);
+      else if(response.tournament_mode)
+        joinTournament(response.lobby, response.lobby_name, response.max_score, response.pac_pong);
       else if(response.max_player_count == 1)
-        joinLocalLobby(response.lobby, response.lobby_name, response.max_score)
+        joinLocalLobby(response.lobby, response.lobby_name, response.max_score, response.pac_pong)
       else 
-        joinLobby(response.lobby, response.lobby_name, response.max_score);
+        joinLobby(response.lobby, response.lobby_name, response.max_score, response.pac_pong);
     })
     .catch(error => {
       console.log('Fetch error: ' + error);
@@ -62,7 +66,7 @@ export function lobbyFull(lobby_id)
         console.log('Error: ' + response.error);
         return true ;
       }
-      return response.lobby.current_player_count >= 2;
+      return response.lobby.current_player_count >= response.lobby.max_player_count;
     })
     .catch(error => {
       console.log('Fetch error: ' + error);
@@ -83,7 +87,7 @@ function listLobbies()
   fetch('/lobby/all/')
     .then(response => response.json())
     .then(lobbies => {
-      const filteredLobbies = lobbies.filter(lobby => lobby.max_player_count === 2);
+      const filteredLobbies = lobbies.filter(lobby => lobby.max_player_count > 1);
       lobbyList.innerHTML = '';
       filteredLobbies.forEach(lobby => {
         let lobbyDiv = document.createElement('div');
@@ -93,7 +97,7 @@ function listLobbies()
         <h3>${lobby.name}</h3>
         ${lobby.password ? '<img src="/svg/lock.svg" alt="password required">' : '<img src="/svg/lock-open.svg" alt="no password required">'}
       `;
-      lobbyDiv.onclick = () => joinLobby(lobby.id, lobby.name, lobby.max_score);
+      lobbyDiv.onclick = () => joinLobby(lobby.id, lobby.name, lobby.max_score, lobby.pac_pong);
       lobbyList.appendChild(lobbyDiv);
       });
     })
