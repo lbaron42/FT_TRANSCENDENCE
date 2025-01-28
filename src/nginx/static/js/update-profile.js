@@ -32,30 +32,46 @@ function loadCurrentUserData() {
 }
 
 function updateUserData() {
-    const payload = {
-        display_name: document.getElementById('display-name').value,
-        email: document.getElementById('email').value,
-        password: document.getElementById('password').value,
-        confirm_password: document.getElementById('confirm-password').value
-    };
+    const formData = new FormData();
+    const displayName = document.getElementById('display-name').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const confirmPassword = document.getElementById('confirm-password').value.trim();
 
+    if (!displayName || !email) {
+        alert('Display Name and Email are required.');
+        return;
+    }
+    if (password && password !== confirmPassword) {
+        alert('Passwords do not match.');
+        return;
+    }
+
+    formData.append('display_name', displayName);
+    formData.append('email', email);
+    if (password) {
+        formData.append('password', password);
+    }
     fetch('/user-api/update-profile/', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCSRFToken()
+            'X-CSRFToken': getCSRFToken(),
         },
-        body: JSON.stringify(payload),
+        body: formData,
         credentials: 'include',
     })
     .then(response => {
-        if (!response.ok) throw new Error('Failed to update profile');
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.error || 'Failed to update profile');
+            });
+        }
         alert('Profile updated successfully!');
         window.location.href = 'profile.html';
     })
     .catch(error => {
         console.error('Error updating profile:', error);
-        alert('Failed to update profile.');
+        alert(error.message || 'Failed to update profile.');
     });
 }
 

@@ -41,8 +41,8 @@ function fetchProfileData() {
 		document.getElementById('draws').textContent = data.stats["games-draws"];
 		document.getElementById('ranking-score').textContent = data.stats["ranking-score"];
 		document.getElementById('games-played').textContent = data.stats["games-played"];
-        if (data.avatar) {
-            document.getElementById('avatar').src = data.avatar;
+        if (data.avatar_url) {
+            document.getElementById('avatar').src = data.avatar_url;
         }
         updateFriendsList(data.friends);
     })
@@ -81,7 +81,7 @@ function getGameStatus(score, playerIdx){
 async function fetchMatchHistory() {
 	const tableBody = document.getElementById('match-history-body');
 	try {
-	const response = await fetch('/user-api/game-history?' + 
+	const response = await fetch('/user-api/game-history?' +
 		new URLSearchParams({limit: '10'}).toString(),{
 			method: 'GET',
 			headers: {
@@ -144,6 +144,9 @@ function uploadAvatar(event) {
             method: 'POST',
             body: formData,
             credentials: 'include',
+            headers: {
+                'X-CSRFToken': getCSRFToken()
+            }
         })
         .then(response => response.json())
         .then(data => {
