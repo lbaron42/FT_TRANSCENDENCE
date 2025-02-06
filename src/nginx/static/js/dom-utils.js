@@ -1,18 +1,50 @@
 import { login, signup } from './auth.js';
+import { getAccessToken} from './auth.js';
+import { refreshAccessToken } from './profile.js';
 
 export async function loadProfile() {
     try {
-        const response = await fetch('/user-api/profile/', {
+        const accessToken = getAccessToken();
+        if (!accessToken) {
+            console.warn("No access token found. Redirecting to login.");
+            showLoginForm();
+            return;
+        }
+
+        let response = await fetch('/user-api/profile/', {
             method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`,
+            },
             credentials: 'include',
         });
 
+        if (response.status === 401) {
+            console.warn("Unauthorized: Attempting token refresh...");
+            const refreshed = await refreshAccessToken();
+            if (refreshed) {
+                response = await fetch('/user-api/profile/', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getAccessToken()}`,
+                    },
+                    credentials: 'include',
+                });
+
+                if (!response.ok) throw new Error("Failed to load profile after refresh.");
+            } else {
+                alert('Session expired. Please log in again.');
+                showLoginForm();
+                return;
+            }
+        }
+
         if (response.ok) {
+            const data = await response.json();
+            console.log("Profile Loaded:", data);
             window.location.href = '/profile.html';
-        } else if (response.status === 401) {
-            alert('Unauthorized. Please log in.');
-            showLoginForm();
         } else {
             console.error('Unexpected error:', response.status);
         }
@@ -20,6 +52,7 @@ export async function loadProfile() {
         console.error('Error loading profile:', error);
     }
 }
+
 
 export function showLoginForm() {
     const mainContent = document.querySelector('body');

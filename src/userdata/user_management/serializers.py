@@ -5,11 +5,17 @@ from .models import FriendRequest
 from django.db import models
 from datetime import timedelta
 from django.utils.timezone import now
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth.models import update_last_login
+from rest_framework_simplejwt.settings import api_settings
 
 class UserSerializer(serializers.ModelSerializer):
+    twoFA_active = serializers.BooleanField(read_only=True)
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'email']
+        fields = ['id', 'username', 'email',  'twoFA_active']
 
 class ProfileSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
@@ -20,9 +26,7 @@ class ProfileSerializer(serializers.ModelSerializer):
         model = Profile
         fields = ['user', 'display_name', 'avatar_url', 'stats']
 
-
     def get_avatar_url(self, obj):
-        """Return the avatar URL or a default if not set."""
         if obj.avatar:
             return obj.avatar.url
         return f"{settings.STATIC_URL}images/default-avatar.jpeg"
@@ -70,3 +74,22 @@ class FriendRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = FriendRequest
         fields = ['id', 'from_user', 'to_user', 'created_at', 'is_accepted', 'is_rejected']
+
+class TokenWith2FASerializer(TokenObtainPairSerializer):
+
+    def validate(self, attrs):
+        jwt_data = super().validate(attrs)
+        token_instance = self.get_token(self.user)
+
+        if self.user.profile.is_2fa_enabled:
+            token_instance['2fa_verified'] = False
+        else:
+            token_instance['2fa_verified'] = True
+
+        jwt_data['refresh'] = str(token_instance)
+        jwt_data['access'] = str(token_instance.access_token)
+
+        if api_settings.UPDATE_LAST_LOGIN:
+            update_last_login(None, self.user)
+
+        return jwt_data

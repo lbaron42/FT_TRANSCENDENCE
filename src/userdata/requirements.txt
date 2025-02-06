@@ -4,3 +4,8 @@ gunicorn==21.2.0
 django-environ
 djangorestframework
 Pillow
+djangorestframework-simplejwt
+django-otp
+django-two-factor-auth[phonenumbers]
+python-decouple
+requests
