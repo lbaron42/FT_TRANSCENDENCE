@@ -1,9 +1,10 @@
-import { getCSRFToken, logout, getRefreshToken, getAccessToken, removeTokens} from './auth.js';
+import {getCSRFToken, logout, getRefreshToken, getAccessToken, removeTokens} from './auth.js';
+import {displayMatchHistory} from './gameHistory.js';
 
 document.addEventListener('DOMContentLoaded', function() {
     fetchProfileData();
     fetchFriends();
-    fetchMatchHistory();
+    displayMatchHistory('two-player-pong');
     fetchPendingRequests();
 
     const logoutButton = document.getElementById('logout-button');
@@ -38,12 +39,23 @@ document.addEventListener('DOMContentLoaded', function() {
     if (twoFAToggle) {
         twoFAToggle.addEventListener('change', toggle2FA);
     }
+
+    const tabs = document.querySelectorAll(".game-tab");
+    tabs.forEach(tab => {
+        tab.addEventListener("click", () => {
+            tabs.forEach(t => t.classList.remove("active")); // Remove active class
+            tab.classList.add("active"); // Set active tab
+
+            const selectedGameMode = tab.getAttribute("data-game");
+            displayMatchHistory(selectedGameMode);
+        });
+    });
 });
 
 export async function refreshAccessToken() {
     const refreshToken = getRefreshToken();
     if (!refreshToken) {
-        console.warn("🚨 No refresh token found.");
+        // console.warn("🚨 No refresh token found.");
         return false;
     }
 
@@ -57,25 +69,24 @@ export async function refreshAccessToken() {
         });
 
         if (!response.ok) {
-            console.error("Refresh token invalid or expired.");
+            // console.error("Refresh token invalid or expired.");
             return false;
         }
 
         const data = await response.json();
         saveTokens(data);
-        console.log("Access token refreshed.");
+        // console.log("Access token refreshed.");
         return true;
     } catch (error) {
-        console.error("Token refresh failed:", error);
+        // console.error("Token refresh failed:", error);
         return false;
     }
 }
 
-
 function fetchProfileData() {
     const accessToken = getAccessToken();
     if (!accessToken) {
-        console.error("No access token found");
+        // console.error("No access token found");
         return;
     }
 
@@ -97,7 +108,7 @@ function fetchProfileData() {
         return response.json();
     })
     .then(data => {
-        console.log("Profile Data:", data);
+        // console.log("Profile Data:", data);
 
         document.getElementById('username').textContent = data.username || "Unknown User";
         document.getElementById('display-name').textContent = data.display_name || "No display name set";
@@ -109,9 +120,17 @@ function fetchProfileData() {
             twoFAToggle.checked = !!data.twoFA_active;
             twoFAStatus.textContent = data.twoFA_active ? "Enabled" : "Disabled";
         }
+
+        // Game statistics
+        const stats = data['stats']
+        document.getElementById('games-played').textContent = stats['total']['games-played'] ?? "-";
+        document.getElementById('games-losses').textContent = stats['total']['games-losses'] ?? "-";
+        document.getElementById('games-wins').textContent = stats['total']['games-wins'] ?? "-";
+        document.getElementById('games-draws').textContent = stats['total']['games-draws'] ?? "-";
+        document.getElementById('ranking-score').textContent = stats['two-player-pong']['ranking-score'] ?? "-";
     })
     .catch(error => {
-        console.error('Error fetching profile data:', error);
+        // console.error('Error fetching profile data:', error);
     });
 }
 
@@ -119,7 +138,7 @@ async function toggle2FA(event) {
     const enable2FA = event.target.checked;
     const accessToken = getAccessToken();
     if (!accessToken) {
-        console.warn("No access token found.");
+        // console.warn("No access token found.");
         return;
     }
 
@@ -146,7 +165,7 @@ async function toggle2FA(event) {
             alert("Two-Factor Authentication Disabled.");
         }
     } catch (error) {
-        console.error(error);
+        // console.error(error);
         alert("Error updating 2FA.");
     }
 }
@@ -155,7 +174,7 @@ async function toggle2FA(event) {
 async function fetchFriends() {
     const accessToken = getAccessToken();
     if (!accessToken) {
-        console.warn("No access token found.");
+        // console.warn("No access token found.");
         return;
     }
 
@@ -171,7 +190,7 @@ async function fetchFriends() {
         });
 
         if (response.status === 401) {
-            console.warn("Unauthorized. Refreshing token...");
+            // console.warn("Unauthorized. Refreshing token...");
             const refreshed = await refreshAccessToken();
             if (refreshed) return fetchFriends();
         }
@@ -181,14 +200,14 @@ async function fetchFriends() {
         const friends = await response.json();
 
         if (!friends || friends.length === 0) {
-            console.warn("No friends found.");
+            // console.warn("No friends found.");
             document.getElementById('friends').innerHTML = '<p>No friends yet.</p>';
             return;
         }
 
         displayFriends(friends);
     } catch (error) {
-        console.error(error);
+        // console.error(error);
     }
 }
 
@@ -235,7 +254,7 @@ async function addFriend() {
 
     const accessToken = getAccessToken();
     if (!accessToken) {
-        console.warn("No access token found.");
+        // console.warn("No access token found.");
         return;
     }
 
@@ -251,7 +270,7 @@ async function addFriend() {
         });
 
         if (response.status === 401) {
-            console.warn("Unauthorized. Refreshing token...");
+            // console.warn("Unauthorized. Refreshing token...");
             const refreshed = await refreshAccessToken();
             if (refreshed) return addFriend(); // Retry
         }
@@ -264,7 +283,7 @@ async function addFriend() {
             throw new Error(data.message || 'Failed to add friend.');
         }
     } catch (error) {
-        console.error(error);
+        // console.error(error);
         alert(error.message);
     }
 }
@@ -274,7 +293,7 @@ async function removeFriend(username) {
 
     const accessToken = getAccessToken();
     if (!accessToken) {
-        console.warn("No access token found.");
+        // console.warn("No access token found.");
         return;
     }
 
@@ -290,7 +309,7 @@ async function removeFriend(username) {
         });
 
         if (response.status === 401) {
-            console.warn("Unauthorized. Refreshing token...");
+            // console.warn("Unauthorized. Refreshing token...");
             const refreshed = await refreshAccessToken();
             if (refreshed) return removeFriend(username);
         }
@@ -303,7 +322,7 @@ async function removeFriend(username) {
             throw new Error(data.message || 'Failed to remove friend.');
         }
     } catch (error) {
-        console.error(error);
+        // console.error(error);
         alert(error.message);
     }
 }
@@ -314,7 +333,7 @@ async function blockFriend(username) {
 
     const accessToken = getAccessToken();
     if (!accessToken) {
-        console.warn("No access token found.");
+        // console.warn("No access token found.");
         return;
     }
 
@@ -337,102 +356,8 @@ async function blockFriend(username) {
             throw new Error(data.message || 'Failed to block user.');
         }
     } catch (error) {
-        console.error(error);
+        // console.error(error);
         alert(error.message);
-    }
-}
-
-function getGameStatus(score, playerIdx){
-	const gameStatusCell = document.createElement('td');
-	const opponentIdx = (playerIdx + 1) % 2;
-	if (score[playerIdx] == score[opponentIdx]){
-		gameStatusCell.textContent = 'Draw';
-		gameStatusCell.style.color = 'yellow';
-	} else if (score[playerIdx] > score[opponentIdx]){
-		gameStatusCell.textContent = 'Win';
-		gameStatusCell.style.color = 'green';
-	} else {
-		gameStatusCell.textContent = 'Lost';
-		gameStatusCell.style.color = 'red';
-	}
-	return (gameStatusCell);
-}
-
-async function fetchMatchHistory() {
-    const accessToken = getAccessToken();
-    if (!accessToken) {
-        console.warn("No access token found.");
-        return;
-    }
-
-    const tableBody = document.getElementById('match-history-body');
-    try {
-        let response = await fetch('/user-api/game-history?' +
-            new URLSearchParams({ limit: '10' }).toString(), {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${accessToken}`,
-                    'X-CSRFToken': getCSRFToken(),
-                },
-                credentials: 'include',
-            });
-
-        if (response.status === 401) {
-            console.warn("Unauthorized. Refreshing token...");
-            const refreshed = await refreshAccessToken();
-            if (refreshed) return fetchMatchHistory();
-        }
-
-        if (!response.ok) throw new Error(`Failed to fetch match history: ${response.status}`);
-
-        const json = await response.json();
-        const games = json.results;
-
-        if (!games || games.length === 0) {
-            console.warn("No match history found.");
-            tableBody.innerHTML = '<tr><td colspan="5">No match history available.</td></tr>';
-            return;
-        }
-
-        tableBody.innerHTML = '';
-
-        games.forEach(game => {
-            const row = document.createElement('tr');
-
-            const dateCell = document.createElement('td');
-            dateCell.textContent = new Date(game.dateTime).toLocaleString();
-            row.appendChild(dateCell);
-
-            const gameModeCell = document.createElement('td');
-            gameModeCell.textContent = game.gameMode;
-            row.appendChild(gameModeCell);
-
-            const opponentCell = document.createElement('td');
-            const scoreCell = document.createElement('td');
-            let gameStatusCell;
-            const username = document.getElementById('username').textContent;
-
-            if (game.players[0] === username) {
-                opponentCell.textContent = game.players[1];
-                scoreCell.textContent = game.score[0] + '-' + game.score[1];
-                gameStatusCell = getGameStatus(game.score, 0);
-            } else if (game.players[1] === username) {
-                opponentCell.textContent = game.players[0];
-                scoreCell.textContent = game.score[1] + '-' + game.score[0];
-                gameStatusCell = getGameStatus(game.score, 1);
-            } else {
-                console.error(`Game with id ${game.id} can't be connected to current user: ${username}. PLAYERS: ${game.players[0]}, ${game.players[1]}`);
-                return;
-            }
-
-            row.appendChild(opponentCell);
-            row.appendChild(scoreCell);
-            row.appendChild(gameStatusCell);
-            tableBody.appendChild(row);
-        });
-    } catch (error) {
-        console.error(error.message);
     }
 }
 
@@ -460,7 +385,7 @@ async function uploadAvatar(event) {
         });
 
         if (response.status === 401) {
-            console.warn("Unauthorized. Refreshing token...");
+            // console.warn("Unauthorized. Refreshing token...");
             const refreshed = await refreshAccessToken();
             if (refreshed) return uploadAvatar(event);
         }
@@ -474,7 +399,7 @@ async function uploadAvatar(event) {
             throw new Error(data.error || 'Failed to upload avatar');
         }
     } catch (error) {
-        console.error('Error uploading avatar:', error);
+        // console.error('Error uploading avatar:', error);
         alert(error.message);
     }
 }
@@ -482,7 +407,7 @@ async function uploadAvatar(event) {
 async function fetchPendingRequests() {
     const accessToken = getAccessToken();
     if (!accessToken) {
-        console.warn("No access token found.");
+        // console.warn("No access token found.");
         return;
     }
 
@@ -498,7 +423,7 @@ async function fetchPendingRequests() {
         });
 
         if (response.status === 401) {
-            console.warn("Unauthorized. Refreshing token...");
+            // console.warn("Unauthorized. Refreshing token...");
             const refreshed = await refreshAccessToken();
             if (refreshed) return fetchPendingRequests();
         }
@@ -507,21 +432,21 @@ async function fetchPendingRequests() {
 
         const data = await response.json();
         if (!data.pending_requests || data.pending_requests.length === 0) {
-            console.warn("No pending friend requests.");
+            // console.warn("No pending friend requests.");
             document.getElementById('pending-requests').innerHTML = '<p>No pending requests.</p>';
             return;
         }
 
         displayPendingRequests(data.pending_requests);
     } catch (error) {
-        console.error(error);
+        // console.error(error);
     }
 }
 
 async function declineFriendRequest(requestId) {
     const accessToken = getAccessToken();
     if (!accessToken) {
-        console.warn("No access token found.");
+        // console.warn("No access token found.");
         return;
     }
 
@@ -541,7 +466,7 @@ async function declineFriendRequest(requestId) {
         alert('Friend request declined.');
         fetchPendingRequests();
     } catch (error) {
-        console.error(error);
+        // console.error(error);
         alert(error.message);
     }
 }

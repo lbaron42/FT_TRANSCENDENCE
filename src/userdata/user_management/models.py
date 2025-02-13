@@ -7,13 +7,16 @@ from django.utils.timezone import now
 from django.utils import timezone
 
 def defaultStats():
-	initStats = dict()
-	initStats["games-wins"] = 0
-	initStats["games-losses"] = 0
-	initStats["games-draws"] = 0
-	initStats["games-played"] = 0
-	initStats["ranking-score"] = 0
-	return initStats
+    initStats = dict()
+    for mode in ['total','two-player-pong','pac-pong','four-player-tournament']:
+        initStats[mode] = {
+            "games-wins": 0,
+            "games-losses": 0,
+            "games-draws": 0,
+            "games-played": 0
+        }
+    initStats['two-player-pong']['ranking-score'] = 1000
+    return initStats
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)

@@ -26,11 +26,11 @@
             <p>Display Name: <span id="display-name"></span></p>
             <div id="user-stats">
                 <h3>Stats</h3>
-                <p>Wins: <span id="wins"></span></p>
-                <p>Losses: <span id="losses"></span></p>
-				<p>Draws: <span id="draws"></span></p>
+                <p>Wins: <span id="games-wins"></span></p>
+                <p>Losses: <span id="games-losses"></span></p>
+				<p>Draws: <span id="games-draws"></span></p>
 				<p>Games Played: <span id="games-played"></span></p>
-				<p>Elo Ranking Score: <span id="ranking-score"></span></p>
+				<p>Pong Elo Ranking Score: <span id="ranking-score"></span></p>
             </div>
             <div id="two-fa-section">
                 <h3>Two-Factor Authentication</h3>
@@ -54,15 +54,14 @@
         </section>
         <section id="match-history">
             <h3>Match History</h3>
+            <div id="game-tabs">
+                <button class="game-tab active" data-game="two-player-pong">Pong</button>
+                <button class="game-tab" data-game="pac-pong">PacPong</button>
+                <button class="game-tab" data-game="four-player-tournament">Tournament</button>
+            </div>
             <table id="match-history-table">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-						<th>Game Mode</th>
-                        <th>Opponent</th>
-                        <th>Score</th>
-                        <th>Result</th>
-                    </tr>
+                <thead id="match-history-head">
+                    <!-- Table headers will be inserted dynamically -->
                 </thead>
                 <tbody id="match-history-body"></tbody>
             </table>

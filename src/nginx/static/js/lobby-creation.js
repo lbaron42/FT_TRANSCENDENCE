@@ -1,4 +1,5 @@
 import { getAccessToken } from './auth.js';
+import { customAlert } from './globals.js';
 import { joinLobby, joinLocalLobby } from './lobby-handling.js';
 import { joinTournament, joinLocalTournament } from './tournament_handler.js';
 
@@ -9,16 +10,42 @@ document.getElementById('list-lobbies').addEventListener('click', listLobbies);
 
 document.getElementById('lobby-form').addEventListener('submit', createLobby);
 
+let pong_selected = true;
+let online_selected = false;
+
 document.addEventListener("DOMContentLoaded", function () {
   const pongModes = document.querySelectorAll("input[name='pong-mode']");
   const tournamentCheck = document.getElementById("tournament-check");
   const tournamentMode = document.getElementById("tournament-mode");
+  const onlineModes = document.querySelectorAll("input[name='mode']");
 
   pongModes.forEach((mode) => {
     mode.addEventListener("change", function () {
       if (this.value === "0") {
-        tournamentCheck.classList.add("active");
+        pong_selected = true;
       } else {
+        pong_selected = false;
+      }
+      if (pong_selected == true && online_selected == true)
+        tournamentCheck.classList.add("active");
+      else 
+      {
+        tournamentCheck.classList.remove("active");
+        tournamentMode.checked = false;
+      }
+    });
+  });
+  onlineModes.forEach((mode) => {
+    mode.addEventListener("change", function () {
+      if (this.value === "2") {
+        online_selected = true;
+      } else {
+        online_selected = false;
+      }
+      if (pong_selected == true && online_selected == true)
+        tournamentCheck.classList.add("active");
+      else 
+      {
         tournamentCheck.classList.remove("active");
         tournamentMode.checked = false;
       }
@@ -55,7 +82,7 @@ function createLobby(event)
     {
       console.log('Raw response:', response);
       if(response.error)
-        alert('Error: ' + response.error);
+        customAlert('Error: ' + response.error);
       else if(response.tournament_mode && response.max_player_count == 1)
         joinLocalTournament(response.lobby, response.lobby_name, response.max_score);
       else if(response.tournament_mode)

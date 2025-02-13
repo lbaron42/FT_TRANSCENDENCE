@@ -78,10 +78,12 @@ class PacPongGame(AsyncWebsocketConsumer):
 		# This is called when the WebSocket connection is first made
 		self.lobby_id = self.scope['url_route']['kwargs']['lobby_id']
 		self.max_score = int(self.scope['url_route']['kwargs']['max_score'])
+		query_string = self.scope["query_string"].decode()
+		query_params = dict(qc.split("=") for qc in query_string.split("&") if "=" in qc)
+		self.token = query_params.get("token")
 		self.lobby_group_name = f"lobby_{self.lobby_id}"
 		self.cookies = self.scope.get('cookies', {})
 		self.csrf_token = self.cookies.get('csrftoken', None)
-		self.token = self.scope.get("subprotocols", [None])[1]
 		self.game_session = None
 
 		if self.token:

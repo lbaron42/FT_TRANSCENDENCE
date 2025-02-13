@@ -31,7 +31,7 @@ async function checkAuthentication() {
     try {
         const accessToken = getAccessToken();
         if (!accessToken) {
-            console.warn("No access token found");
+            // console.warn("No access token found");
             return;
         }
 
@@ -44,7 +44,7 @@ async function checkAuthentication() {
             credentials: 'include',
         });
 
-        console.error(`Raw Response: ${response.status}`);
+        // console.error(`Raw Response: ${response.status}`);
 
         if (response.ok) {
             const data = await response.json();
@@ -56,7 +56,7 @@ async function checkAuthentication() {
             document.getElementById('logout-button').style.display = 'inline-block';
             document.getElementById('profile-button').style.display = 'inline-block';
         } else if (response.status === 401) {
-            console.warn("Unauthorized: Trying token refresh...");
+            // console.warn("Unauthorized: Trying token refresh...");
             const refreshed = await refreshAccessToken();
             if (refreshed) return checkAuthentication();
             document.getElementById('sign-background').classList.add('active');
@@ -68,6 +68,6 @@ async function checkAuthentication() {
             document.getElementById('profile-button').style.display = 'none';
         }
     } catch (error) {
-        console.error('Authentication check failed:', error);
+        // console.error('Authentication check failed:', error);
     }
 }

@@ -35,7 +35,6 @@
 
   </div>
   <main>
-    <div class="chat"></div>
     <div>
         <div class="game-selector active" id="online">
           <div class="online active" id="option-choose">
@@ -74,7 +73,7 @@
                 </label>
               </div>
             </div>
-            <div class="active" id="tournament-check">
+            <div id="tournament-check">
               <label for="tournament-mode">Tournament Mode:</label>
               <input type="checkbox" name="tornament-mode" id="tournament-mode">
             </div>
@@ -104,31 +103,30 @@
           <div class="online" id="tournament">
             <div id="tournament-prep">
               <h2 id="tournament-header">Tournament: </h2>
-              <h3 id="players-header">Players: </h3>
-              <div id="player-container"></div>
+              <div>
+                <h3 id="players-header">Players: </h3>
+                <div id="player-container"></div>
+              </div>
             </div>
             <div id="tournament-container" class="disable">
               <div>
                 <div>
-                  <button class="player_button" id="p1-round1">Name 1</button>
-                  <button id="start-1">Start</button>
-                  <button class="player_button" id="p2-round1">Name 2</button>
+                  <button class="player_button player_tournament" id="p1-round1">Name 1</button>
+                  <button class="start_round disabled" id="start-1">Start</button>
+                  <button class="player_button player_tournament" id="p2-round1">Name 2</button>
                 </div>
                 <div>
-                  <button class="player_button" id="p3-round1">Name 3</button>
-                  <button id="start-2">Start</button>
-                  <button class="player_button" id="p4-round1">Name 4</button>
+                  <button class="player_button player_tournament" id="p3-round1">Name 3</button>
+                  <button class="start_round disabled" id="start-2">Start</button>
+                  <button class="player_button player_tournament" id="p4-round1">Name 4</button>
                 </div>
               </div>
               <div>
                 <div>
-                  <button class="player_button" id="p3-round1">Name 3</button>
-                  <button class="player_button" id="start-2">Start</button>
-                  <button class="player_button" id="p4-round1">Name 4</button>
+                  <button class="player_button player_tournament" id="p1-round2"></button>
+                  <button class="start_round disabled" id="start-3">Start</button>
+                  <button class="player_button player_tournament" id="p2-round2"></button>
                 </div>
-              </div>
-              <div>
-
               </div>
             </div>
             <button class="start_button" id="start_tournament">Start Tournament</button>
@@ -174,6 +172,10 @@
         <p>Already have an account? <span id="login-link">Log In</span></p>
       </form>
      </div>
+     <div class="sign sign-background" id="alert-background" ></div>
+     <div class="sign" id="alert">
+      <div class="sign-in active" id="alert-div"></div>
+     </div>
     
   </main>
 	
@@ -183,7 +185,6 @@
   <script type="module" src="./js/game-handling.js"></script>
   <script type="module" src="./js/lobby-creation.js"></script>
   <script type="module" src="./js/lobby-handling.js"></script>
-  <script type="module" src="./js/game-modes.js"></script>
   <script type="module" src="./js/index.js"></script>
 <!--   <script type="module" src="./js/profile.js"></script>
  -->

@@ -4,3 +4,4 @@ user_management/__pycache__/
 user_management/migrations/
 game_data/__pycache__/
 game_data/migrations/
+.env

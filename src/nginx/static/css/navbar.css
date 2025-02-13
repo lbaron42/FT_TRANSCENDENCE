@@ -6,6 +6,11 @@
     height: 5vh;
     align-items: center;
     border-bottom: 2px solid rgb(253, 248, 229);
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 3;
 }
 
 .navbar > div:first-of-type

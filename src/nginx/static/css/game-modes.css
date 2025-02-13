@@ -1,32 +1,5 @@
 /* Tab Buttons */
-.game-mode-tabs {
-    display: flex;
-    gap: 10px;
-  }
-  
-.game-tab {
-    position: relative;
-    background: rgb(68, 68, 68);
-    padding: 10px 30px 10px 10px;
-    cursor: pointer;
-    z-index: 1;
-  }
 
-.game-tab.active {
-    background-color: rgb(253, 248, 229);
-    color: rgb(20, 20, 20);
-    z-index: 2;
-  }
-  
-.game-tab:hover {
-    background-color: #a8a8a8;
-    color: #1d1d1d;
-  }
-
-.game-tab.active:hover {
-    background-color: rgb(253, 248, 229);
-  }
-  
 .game-modes {
     width: 100%;
     aspect-ratio: 2 / 1;
@@ -67,7 +40,7 @@
   font-size: clamp(1.6rem, 0.049rem + 2vw, 4rem);
   font-weight: 700;
   justify-content: center;
-  line-height: 1.75rem;
+  /* line-height: 1.75rem; */
   padding: 2rem 4rem;
   position: relative;
   text-align: center;
@@ -194,8 +167,58 @@
   width: 10%;
   object-fit: cover;
 }
+.game-selector .start_round {
+  font-size: clamp(0.8rem, 0.049rem + 1vw, 2rem);
+  padding: 1rem 2rem;
+  width: 50%;
+}
+
+.game-selector .start_round.disabled {
+  background-color: #8d8d8d;
+  color: #727272;
+}
+
+@keyframes fightingText {
+  0%   { content: "Fighting."; }
+  33%  { content: "Fighting.."; }
+  66%  { content: "Fighting..."; }
+  100% { content: "Fighting."; }
+}
+
+.fighting::after {
+  content: "Fighting.";
+  animation: fightingText 1.5s infinite steps(1);
+}
 
 
+#tournament-container div div .player_button {
+  background-color: inherit;
+  cursor:alias;
+}
+
+#tournament-container div div .player_button:hover::after {
+  bottom: 0;
+  left: 0;
+}
+
+#tournament-container div div .player_button::after {
+  bottom: 0;
+  left: 0;
+}
+
+#tournament-container div div .start_round::after {
+  bottom: 0.2vw;
+  left: 0.2vw;
+}
+
+#tournament-container div div .start_round:hover::after {
+  bottom: 0.1vw;
+  left: 0.1vw;
+}
+
+/* .game-selector .deactive {
+
+} */
 
 #lobby {
   height: 80%;
@@ -313,41 +336,71 @@
   background-color: #8d8d8d;
 }
 
+#tournament {
+  flex-direction: column;
+  position: relative;
+  height: 100%;
+  width: 100%;
+  justify-content: flex-start;
+}
+
 #tournament .disable {
   display: none;
+}
+
+#player-container > button::after {
+  bottom: 2px;
+  left: 2px;
+}
+
+#player-container > button:hover {
+  background-color: inherit;
+}
+
+#tournament > #tournament-container {
+  position: absolute;
+  flex-direction: row;
+  width: 100%;
+  z-index: 2;
+  top: 5vh;
+  height: 100%;
 }
 #tournament > div {
   display: flex;
   flex-direction: column;
+  height: 80%;
   justify-content: space-around;
   align-items: center;
 }
 
 #tournament > div > div {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+  gap: 5vh;
+}
+
+#tournament-prep > div {
+  gap: 15px;
 }
 
 #tournament > div > div > div{
   display: flex;
   flex-direction: column;
-
+  align-items: center;
+  gap: 2vh;
 }
+
 
 #game-canvas {
   border: 2px solid white;
 }
 
-/* .player_button {
-  cursor: pointer;
-  width: 20%;
-  padding: 10px;
-  } */
-  
-  /* button 53 media query
-  @media (min-width: 768px) {
-    .button-53 {
-    padding: .75rem 3rem;
-    font-size: 1.25rem;
-    }
-} */
+#start_tournament {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 2vh;
+  z-index: 3;
+}

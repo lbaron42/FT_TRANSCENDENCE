@@ -1,4 +1,4 @@
-import { lobby_socket, name, closeSockets, initLobbySocket } from "./globals.js";
+import { lobby_socket, name, closeSockets, initLobbySocket, customAlert } from "./globals.js";
 import { lobbyFull } from "./lobby-creation.js";
 import { startGame } from "./game-handling.js";
 import { startPacPong } from "./pacpong-handling.js";
@@ -87,7 +87,7 @@ export function joinLobby(lobby_id, lobby_name, max_score, pac_pong)
   {
     lobbyFull(lobby_id).then(is_full => {
       if (is_full) {
-        alert('Lobby is full. Cannot join.');
+        customAlert('Lobby is full. Cannot join.');
         return;
       }
   
@@ -183,7 +183,7 @@ export function joinLobby(lobby_id, lobby_name, max_score, pac_pong)
           }
         );
         document.getElementById('option-choose').classList.add('active')
-        alert("Player already in lobby.");
+        customAlert("Player already in lobby.");
       }
     }
     });

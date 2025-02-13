@@ -1,5 +1,5 @@
 import { getCSRFToken } from "./auth.js";
-import { gameplay_socket, initGameplaySocket, closeGameplaySocket } from "./globals.js";
+import { gameplay_socket, initGameplaySocket, closeGameplaySocket, customAlert } from "./globals.js";
 
 export function startPacPong(lobby_id, player, player_count, roles, max_score) {
 	console.log("in pac pong");
@@ -173,7 +173,7 @@ export function startPacPong(lobby_id, player, player_count, roles, max_score) {
 			}
 			);
 			document.getElementById('lobby').classList.add('active');
-			alert("Player disconnected - returning to lobby.");
+			customAlert("Player disconnected - returning to lobby.");
 		}
 		else if (data.type == 'game_end') {
 			console.log("game ending...");
@@ -182,7 +182,7 @@ export function startPacPong(lobby_id, player, player_count, roles, max_score) {
 				content.classList.remove('active');
 			}
 			);
-			alert(data.message);
+			customAlert(data.message);
 			document.getElementById('lobby').classList.add('active');
 		}
 	};

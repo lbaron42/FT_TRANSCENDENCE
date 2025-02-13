@@ -1,8 +1,8 @@
 import { drawGame2d, drawGame3d } from "./drawPongGame.js";
-import { gameplay_socket, initGameplaySocket, closeGameplaySocket, customAlert } from "./globals.js";
+import { gameplay_socket, lobby_socket, initGameplaySocket, closeGameplaySocket, customAlert } from "./globals.js";
 
 
-export function startGame(lobby_id, player, player_count, roles, max_score)
+export function startTournamentGame(lobby_id, game_id, player, player_count, roles, max_score)
 {
     let gameSettings = {
         scoreBoard : document.getElementById('score'),
@@ -54,10 +54,7 @@ export function startGame(lobby_id, player, player_count, roles, max_score)
       console.log(gameSettings);
     });
 
-    if (player_count == 1)
-      initGameplaySocket(`/ws/gameplay/local/${max_score}/${lobby_id}/`);
-    else
-      initGameplaySocket(`/ws/gameplay/${max_score}/${lobby_id}/`);
+    initGameplaySocket(`/ws/gameplay/${max_score}/${lobby_id}/`);
 
     const encodeState = (player, direction, moving) => {
       const playerBit = (player == 'p1' ? 0 : 1);
@@ -123,8 +120,7 @@ export function startGame(lobby_id, player, player_count, roles, max_score)
             content.classList.remove('active');
           }
         );
-        document.getElementById('lobby').classList.add('active');
-        customAlert("Player disconnected - returning to lobby.");
+        document.getElementById('tournament').classList.add('active');
       }
       else if(data.type == 'game_end') {
         console.log("game ending...");
@@ -135,7 +131,13 @@ export function startGame(lobby_id, player, player_count, roles, max_score)
           }
         );
         customAlert(data.message);
-        document.getElementById('lobby').classList.add('active');
+        document.getElementById('tournament').classList.add('active');
+        const message = {
+        	action : 'game_end',
+			    game: game_id,
+			    winner : data.winner,
+          };
+        lobby_socket.send(JSON.stringify(message));
       }
     };
 

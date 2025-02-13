@@ -12,7 +12,7 @@ export function initLobbySocket(url)
 {
   const accessToken = getAccessToken();
     if (!lobby_socket)
-        lobby_socket = new WebSocket(url, ["Authorization", accessToken]);
+        lobby_socket = new WebSocket(`${url}?token=${accessToken}`);
     else
         console.warn("Lobby socket already initialized.");
 }
@@ -20,22 +20,18 @@ export function initLobbySocket(url)
 export function initGameplaySocket(url)
 {
   const accessToken = getAccessToken();
-  if (!accessToken)
-    console.log(`jess no token`);
-  else
-  console.log(`accessToken: ${accessToken}`);
+
   gameplay_socket = null;
     if (!gameplay_socket)
-        gameplay_socket = new WebSocket(url, ["Authorization", accessToken]);
+        gameplay_socket = new WebSocket(`${url}?token=${accessToken}`);
     else
         console.warn("Gameplaylocket socket already initialized.");
 }
 
 export function closeGameplaySocket()
 {
-  console.log("in close gameplay socket");
   if (gameplay_socket && gameplay_socket.readyState === WebSocket.OPEN) {
-    console.log("closing socket...");
+    console.log("closing gameplay  socket...");
     gameplay_socket.close();
   }
   gameplay_socket = null;
@@ -43,6 +39,7 @@ export function closeGameplaySocket()
 
 export function closeSockets() {
     if (lobby_socket && lobby_socket.readyState === WebSocket.OPEN) {
+      console.log("closing lobby socket")
       lobby_socket.close();
     }
     lobby_socket = null;
@@ -55,4 +52,28 @@ export function setName(_name) {
 
 export function unsetName() {
   name = "";
+}
+
+export function customAlert(message) {
+  const alert_background = document.getElementById('alert-background');
+  const alert = document.getElementById('alert');
+  const alert_div = document.getElementById('alert-div');
+
+  alert.classList.add('active');
+  alert_background.classList.add('active');
+  alert_div.innerHTML = '';
+
+  const title = document.createElement('h2');
+  title.textContent = message;
+  alert_div.appendChild(title);
+
+  const button = document.createElement('button');
+  button.textContent = 'OK';
+  button.classList.add('start_round');
+  button.addEventListener('click', () => {
+    alert.classList.remove('active');
+    alert_background.classList.remove('active');
+  });
+  alert_div.appendChild(button);
+  
 }
