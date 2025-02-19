@@ -5,6 +5,7 @@ COPY . .
 RUN pip install --no-cache-dir -r requirements.txt
 
 ENV GAMEPLAY_SECRET_KEY=$GAMEPLAY_SECRET_KEY
+ENV MICROSERVICE_SECRET_TOKEN=$MICROSERVICE_SECRET_TOKEN
 
 RUN python manage.py makemigrations
 RUN python manage.py migrate
