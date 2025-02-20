@@ -354,21 +354,89 @@ function updateScoreDisplays() {
     scene.add(player2ScoreText);
 }
 
-// Add function to create instructions text
+// Update the createInstructionsText function
 function createInstructionsText(max_score) {
     if (!font) return;
 
-    const textMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-    const instructionsText = new THREE.Mesh(
+    // Create a group to hold text and glow
+    const textGroup = new THREE.Group();
+
+    // Main text with glow effect
+    const textMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0xff3333,          // Bright red
+        emissive: 0xff0000,       // Red glow
+        emissiveIntensity: 0.5,   // Reduced glow intensity
+        shininess: 50,
+        transparent: true,
+        opacity: 0.9
+    });
+
+    // Create main text
+    const mainText = new THREE.Mesh(
         new TextGeometry(`Score ${max_score} points to win!`, {
             font: font,
-            size: 0.5,
-            depth: 0.1,  // Changed from height to depth
+            size: 0.6,            // Slightly larger
+            depth: 0.05,          // Thinner depth
+            bevelEnabled: true,
+            bevelThickness: 0.02,
+            bevelSize: 0.01,
+            bevelSegments: 5
         }),
         textMaterial
     );
-    instructionsText.position.set(-3, 3, -4);
-    scene.add(instructionsText);
+
+    // Create outer glow
+    const glowMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0xff0000,
+        emissive: 0xff0000,
+        emissiveIntensity: 0.4,
+        transparent: true,
+        opacity: 0.3,
+        side: THREE.FrontSide    // Only show front face
+    });
+
+    const glowText = mainText.clone();
+    glowText.material = glowMaterial;
+    glowText.scale.multiplyScalar(1.02); // Just slightly larger
+    glowText.position.z = 0.01; // Slightly in front
+
+    // Add both to group
+    textGroup.add(mainText);
+    textGroup.add(glowText);
+
+    // Position the group - moved forward and up for better visibility
+    textGroup.position.set(-3.5, 4, -2);
+    textGroup.rotation.x = -0.2; // Slight tilt for better readability
+
+    // Add animation data
+    textGroup.userData = {
+        pulseTime: 0,
+        baseIntensity: 0.5
+    };
+
+    scene.add(textGroup);
+    return textGroup;
+}
+
+// Update the glow animation
+function updateInstructionsGlow(textGroup, deltaTime) {
+    if (!textGroup) return;
+
+    textGroup.userData.pulseTime += deltaTime * 3; // Faster pulse
+    const pulseFactor = (Math.sin(textGroup.userData.pulseTime) + 1) / 2;
+
+    const mainText = textGroup.children[0];
+    const glowText = textGroup.children[1];
+
+    if (mainText.material && glowText.material) {
+        // Subtle pulse for main text
+        mainText.material.emissiveIntensity = 
+            textGroup.userData.baseIntensity * (0.9 + pulseFactor * 0.2);
+        
+        // More pronounced pulse for glow
+        glowText.material.opacity = 0.2 + pulseFactor * 0.2;
+        glowText.material.emissiveIntensity = 0.4 + pulseFactor * 0.3;
+    }
 }
 
 // Add this new function to create the impact effect
@@ -572,10 +640,11 @@ export function updateGameState(gameSettings, paddleL, paddleR, ballX, ballY) {
     renderer.domElement.max_score = gameSettings.max_score;
 }
 
+// Update the animate function
 export function animate() {
     if (!scene || !camera || !renderer) return;
     
-    const deltaTime = 1/60; // Assuming 60fps, could use actual delta time if needed
+    const deltaTime = 1/60;
     
     requestAnimationFrame(animate);
     controls?.update();
@@ -585,12 +654,17 @@ export function animate() {
     updateCameraShake();
     
     // Update score animations
-    if (updateScoreAnimations(deltaTime)) {
-        // Only render if animations are active
-        renderer.render(scene, camera);
-    } else {
-        renderer.render(scene, camera);
-    }
+    let needsUpdate = updateScoreAnimations(deltaTime);
+    
+    // Update instruction glow
+    scene.traverse((object) => {
+        if (object.isGroup && object.userData.hasOwnProperty('pulseTime')) {
+            updateInstructionsGlow(object, deltaTime);
+            needsUpdate = true;
+        }
+    });
+
+    renderer.render(scene, camera);
 }
 
 export function resizeRenderer(width, height) {
