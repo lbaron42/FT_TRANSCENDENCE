@@ -14,6 +14,11 @@ let trailPoints = [];
 const MAX_TRAIL_LENGTH = 40;  // Even longer trail
 const BALL_SIZE = 0.3;  // Keep original ball size
 
+// Add these global variables at the top
+let impactParticles = [];
+let cameraShakeIntensity = 0;
+const SHAKE_DECAY = 0.9;
+
 export function initGame3D(canvas) {
     // Initialize renderer with explicit pixel ratio and size handling
     renderer = new THREE.WebGLRenderer({
@@ -348,6 +353,98 @@ function createInstructionsText(max_score) {
     scene.add(instructionsText);
 }
 
+// Add this new function to create the impact effect
+function createImpactEffect(position, color) {
+    const particleCount = 20;
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+    const velocities = [];
+    
+    // Create particles in a circular burst pattern
+    for (let i = 0; i < particleCount; i++) {
+        const angle = (i / particleCount) * Math.PI * 2;
+        const speed = 0.1 + Math.random() * 0.1;
+        const radius = 0.2;
+        
+        positions[i * 3] = position.x;
+        positions[i * 3 + 1] = position.y;
+        positions[i * 3 + 2] = position.z;
+        
+        velocities.push({
+            x: Math.cos(angle) * speed,
+            y: (Math.random() - 0.5) * speed,
+            z: Math.sin(angle) * speed
+        });
+    }
+    
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    
+    const material = new THREE.PointsMaterial({
+        color: color,
+        size: BALL_SIZE * 1.5,
+        transparent: true,
+        opacity: 1,
+        map: createParticleTexture(),
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+    });
+    
+    const particles = new THREE.Points(geometry, material);
+    scene.add(particles);
+    
+    impactParticles.push({
+        mesh: particles,
+        velocities: velocities,
+        life: 1.0
+    });
+}
+
+// Add this function to update impact particles
+function updateImpactParticles() {
+    for (let i = impactParticles.length - 1; i >= 0; i--) {
+        const impact = impactParticles[i];
+        impact.life -= 0.05;
+        
+        const positions = impact.mesh.geometry.attributes.position.array;
+        
+        // Update particle positions based on velocities
+        for (let j = 0; j < positions.length / 3; j++) {
+            positions[j * 3] += impact.velocities[j].x;
+            positions[j * 3 + 1] += impact.velocities[j].y;
+            positions[j * 3 + 2] += impact.velocities[j].z;
+            
+            // Add gravity effect
+            impact.velocities[j].y -= 0.003;
+        }
+        
+        impact.mesh.geometry.attributes.position.needsUpdate = true;
+        impact.mesh.material.opacity = impact.life;
+        
+        // Remove dead particles
+        if (impact.life <= 0) {
+            scene.remove(impact.mesh);
+            impact.mesh.geometry.dispose();
+            impact.mesh.material.dispose();
+            impactParticles.splice(i, 1);
+        }
+    }
+}
+
+// Add camera shake function
+function updateCameraShake() {
+    if (cameraShakeIntensity > 0) {
+        camera.position.x += (Math.random() - 0.5) * cameraShakeIntensity;
+        camera.position.y += (Math.random() - 0.5) * cameraShakeIntensity;
+        camera.position.z += (Math.random() - 0.5) * cameraShakeIntensity;
+        
+        cameraShakeIntensity *= SHAKE_DECAY;
+        
+        if (cameraShakeIntensity < 0.001) {
+            cameraShakeIntensity = 0;
+        }
+    }
+}
+
 export function updateGameState(gameSettings, paddleL, paddleR, ballX, ballY) {
     if (!scene || !ball || !playerPaddle || !player2Paddle) return;
 
@@ -357,13 +454,27 @@ export function updateGameState(gameSettings, paddleL, paddleR, ballX, ballY) {
     // Store the initial Z offset that we set in the paddle creation
     const zOffset = 0.5;  // Match the value we set in position.set()
 
+    // Store previous ball position for collision detection
+    const prevBallX = ball.position.x;
+
     // Update paddles - add the zOffset to maintain the forward position
     playerPaddle.position.z = (((paddleL / gameSettings.canvas.height) * worldDepth) - (worldDepth / 2)) + zOffset;
     player2Paddle.position.z = (((paddleR / gameSettings.canvas.height) * worldDepth) - (worldDepth / 2)) + zOffset;
 
     // Update ball position
-    ball.position.z = ((ballY / gameSettings.canvas.height) * worldDepth) - (worldDepth / 2);
-    ball.position.x = ((ballX / gameSettings.canvas.width) * worldWidth) - (worldWidth / 2);
+    const newBallX = ((ballX / gameSettings.canvas.width) * worldWidth) - (worldWidth / 2);
+    const newBallZ = ((ballY / gameSettings.canvas.height) * worldDepth) - (worldDepth / 2);
+
+    // Check for paddle collisions
+    if (Math.abs(newBallX - prevBallX) > 0.1) { // Ball direction changed significantly
+        const color = (newBallX > 0) ? 0x00ff00 : 0xff0000;
+        createImpactEffect(ball.position, color);
+        cameraShakeIntensity = 0.1; // Trigger screen shake
+    }
+
+    // Update positions
+    ball.position.x = newBallX;
+    ball.position.z = newBallZ;
 
     // Update scores
     const scoreText = gameSettings.scoreBoard.textContent;
@@ -385,6 +496,8 @@ export function animate() {
     controls?.update();
     updateStarfield();
     updateBallTrail();
+    updateImpactParticles();
+    updateCameraShake();
     renderer.render(scene, camera);
 }
 
@@ -448,6 +561,15 @@ export function cleanup() {
         ballTrail = null;
     }
     trailPoints = [];
+
+    // Clean up impact particles
+    impactParticles.forEach(impact => {
+        scene.remove(impact.mesh);
+        impact.mesh.geometry.dispose();
+        impact.mesh.material.dispose();
+    });
+    impactParticles = [];
+    cameraShakeIntensity = 0;
 }
 
 function updateBallTrail() {
