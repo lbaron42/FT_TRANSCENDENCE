@@ -9,6 +9,10 @@ let playerScoreText, player2ScoreText;
 let font;
 let currentScore = { left: 0, right: 0 };
 let starfield;
+let ballTrail;
+let trailPoints = [];
+const MAX_TRAIL_LENGTH = 40;  // Even longer trail
+const BALL_SIZE = 0.3;  // Keep original ball size
 
 export function initGame3D(canvas) {
     // Initialize renderer with explicit pixel ratio and size handling
@@ -66,8 +70,27 @@ export function initGame3D(canvas) {
     });
     ball = new THREE.Mesh(ballGeometry, ballMaterial);
     ball.castShadow = true;
-    ball.position.y = 0.3; // Back to original height
+    ball.position.y = 0.3;
     scene.add(ball);
+
+    // Create a circular particle texture programmatically
+    const particleTexture = createParticleTexture();
+
+    // Add trail system
+    const trailGeometry = new THREE.BufferGeometry();
+    const trailMaterial = new THREE.PointsMaterial({
+        color: 0xff0000,
+        transparent: true,
+        opacity: 0.9,  // Higher base opacity
+        size: BALL_SIZE * 3.0,  // Much bigger starting size
+        sizeAttenuation: true,
+        map: particleTexture,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        vertexColors: true,
+    });
+    ballTrail = new THREE.Points(trailGeometry, trailMaterial);
+    scene.add(ballTrail);
 
     // Enhanced paddles with metallic effect
     const paddleGeometry = new THREE.BoxGeometry(1, 0.5, 0.5);
@@ -361,6 +384,7 @@ export function animate() {
     requestAnimationFrame(animate);
     controls?.update();
     updateStarfield();
+    updateBallTrail();
     renderer.render(scene, camera);
 }
 
@@ -417,4 +441,93 @@ export function cleanup() {
     player2ScoreText = null;
     font = null;
     currentScore = { left: 0, right: 0 };
+
+    if (ballTrail) {
+        ballTrail.geometry.dispose();
+        ballTrail.material.dispose();
+        ballTrail = null;
+    }
+    trailPoints = [];
+}
+
+function updateBallTrail() {
+    if (!ball || !ballTrail) return;
+
+    // Add current position to trail
+    trailPoints.unshift({
+        x: ball.position.x,
+        y: ball.position.y,
+        z: ball.position.z
+    });
+
+    // Limit trail length
+    if (trailPoints.length > MAX_TRAIL_LENGTH) {
+        trailPoints.pop();
+    }
+
+    // Prepare buffer attributes
+    const positions = new Float32Array(trailPoints.length * 3);
+    const sizes = new Float32Array(trailPoints.length);
+    const colors = new Float32Array(trailPoints.length * 3);
+    
+    trailPoints.forEach((point, i) => {
+        const progress = i / MAX_TRAIL_LENGTH;
+        
+        // Position
+        positions[i * 3] = point.x;
+        positions[i * 3 + 1] = point.y;
+        positions[i * 3 + 2] = point.z;
+
+        // Size - Start much larger and shrink more gradually
+        sizes[i] = BALL_SIZE * (4.0 - progress * 3.0);
+
+        // Smooth fading effect for opacity
+        const opacity = Math.pow(1 - progress, 1.5); // Even less aggressive fade
+
+        // Color - Brighter at the start, fades to dim red
+        colors[i * 3] = 1.0;      // Red
+        colors[i * 3 + 1] = 0.8 * (1 - progress);  // Even more orange
+        colors[i * 3 + 2] = 0.3 * (1 - progress);  // More orange glow
+        
+        // Apply opacity to colors
+        colors[i * 3] *= opacity;
+        colors[i * 3 + 1] *= opacity;
+        colors[i * 3 + 2] *= opacity;
+    });
+
+    ballTrail.geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    ballTrail.geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+    ballTrail.geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+}
+
+
+// Create a circular particle texture programmatically
+function createParticleTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    
+    const context = canvas.getContext('2d');
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radius = canvas.width / 3;
+
+    // Create radial gradient
+    const gradient = context.createRadialGradient(
+        centerX, centerY, 0,
+        centerX, centerY, radius
+    );
+    gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+    gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.5)');
+    gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+    // Draw circle
+    context.fillStyle = gradient;
+    context.beginPath();
+    context.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    context.fill();
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.premultiplyAlpha = true;
+    return texture;
 }
