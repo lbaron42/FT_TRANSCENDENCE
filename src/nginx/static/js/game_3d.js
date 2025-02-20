@@ -18,6 +18,12 @@ const BALL_SIZE = 0.3;  // Keep original ball size
 let impactParticles = [];
 let cameraShakeIntensity = 0;
 const SHAKE_DECAY = 0.9;
+let scoreAnimations = {
+    left: { scale: 1, time: 0 },
+    right: { scale: 1, time: 0 }
+};
+const SCORE_ANIMATION_DURATION = 1.0; // Duration in seconds
+const MAX_SCALE = 1.5; // Maximum scale during animation
 
 export function initGame3D(canvas) {
     // Initialize renderer with explicit pixel ratio and size handling
@@ -301,7 +307,13 @@ function createScoreDisplays() {
 function updateScoreDisplays() {
     if (!font || !scene) return;
 
-    const textMaterial = new THREE.MeshBasicMaterial({ color: 0xffd700 }); // Yellow color
+    // Create base material with emissive properties
+    const textMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0xffd700,
+        emissive: 0xffd700,
+        emissiveIntensity: 0.5,
+        shininess: 100
+    });
 
     // Update left score
     if (playerScoreText) {
@@ -312,11 +324,14 @@ function updateScoreDisplays() {
         new TextGeometry(currentScore.left.toString(), {
             font: font,
             size: 0.8,
-            depth: 0.1,  // Changed from height to depth
+            depth: 0.2,
         }),
-        textMaterial
+        textMaterial.clone() // Clone material for independent animation
     );
     playerScoreText.position.set(-2, 3, 0);
+    // Apply current animation scale
+    const leftScale = scoreAnimations.left.scale;
+    playerScoreText.scale.set(leftScale, leftScale, leftScale);
     scene.add(playerScoreText);
 
     // Update right score
@@ -328,11 +343,14 @@ function updateScoreDisplays() {
         new TextGeometry(currentScore.right.toString(), {
             font: font,
             size: 0.8,
-            depth: 0.1,  // Changed from height to depth
+            depth: 0.2,
         }),
-        textMaterial
+        textMaterial.clone() // Clone material for independent animation
     );
     player2ScoreText.position.set(2, 3, 0);
+    // Apply current animation scale
+    const rightScale = scoreAnimations.right.scale;
+    player2ScoreText.scale.set(rightScale, rightScale, rightScale);
     scene.add(player2ScoreText);
 }
 
@@ -445,6 +463,58 @@ function updateCameraShake() {
     }
 }
 
+// Add this new function to handle score animations
+function updateScoreAnimations(deltaTime) {
+    let needsUpdate = false;
+
+    // Update left score animation
+    if (scoreAnimations.left.time > 0) {
+        scoreAnimations.left.time -= deltaTime;
+        const progress = 1 - (scoreAnimations.left.time / SCORE_ANIMATION_DURATION);
+        const easeOutProgress = 1 - Math.pow(1 - progress, 3); // Cubic ease out
+        
+        if (progress <= 0.5) {
+            // Scale up during first half
+            scoreAnimations.left.scale = 1 + (MAX_SCALE - 1) * (1 - Math.pow(1 - progress * 2, 3));
+        } else {
+            // Scale down during second half
+            scoreAnimations.left.scale = 1 + (MAX_SCALE - 1) * Math.pow(1 - (progress - 0.5) * 2, 3);
+        }
+        
+        if (playerScoreText) {
+            const scale = scoreAnimations.left.scale;
+            playerScoreText.scale.set(scale, scale, scale);
+            playerScoreText.material.emissiveIntensity = 1 - easeOutProgress;
+        }
+        needsUpdate = true;
+    }
+
+    // Update right score animation
+    if (scoreAnimations.right.time > 0) {
+        scoreAnimations.right.time -= deltaTime;
+        const progress = 1 - (scoreAnimations.right.time / SCORE_ANIMATION_DURATION);
+        const easeOutProgress = 1 - Math.pow(1 - progress, 3); // Cubic ease out
+        
+        if (progress <= 0.5) {
+            // Scale up during first half
+            scoreAnimations.right.scale = 1 + (MAX_SCALE - 1) * (1 - Math.pow(1 - progress * 2, 3));
+        } else {
+            // Scale down during second half
+            scoreAnimations.right.scale = 1 + (MAX_SCALE - 1) * Math.pow(1 - (progress - 0.5) * 2, 3);
+        }
+        
+        if (player2ScoreText) {
+            const scale = scoreAnimations.right.scale;
+            player2ScoreText.scale.set(scale, scale, scale);
+            player2ScoreText.material.emissiveIntensity = 1 - easeOutProgress;
+        }
+        needsUpdate = true;
+    }
+
+    return needsUpdate;
+}
+
+// Update the updateGameState function to trigger score animations
 export function updateGameState(gameSettings, paddleL, paddleR, ballX, ballY) {
     if (!scene || !ball || !playerPaddle || !player2Paddle) return;
 
@@ -476,12 +546,25 @@ export function updateGameState(gameSettings, paddleL, paddleR, ballX, ballY) {
     ball.position.x = newBallX;
     ball.position.z = newBallZ;
 
-    // Update scores
+    // Update scores and trigger animations
     const scoreText = gameSettings.scoreBoard.textContent;
     const scores = scoreText.match(/(\d+)\s*\|\s*(\d+)/);
     if (scores) {
-        currentScore.left = parseInt(scores[1]);
-        currentScore.right = parseInt(scores[2]);
+        const newLeft = parseInt(scores[1]);
+        const newRight = parseInt(scores[2]);
+        
+        // Check if scores changed
+        if (newLeft > currentScore.left) {
+            scoreAnimations.left.time = SCORE_ANIMATION_DURATION;
+            scoreAnimations.left.scale = 1;
+        }
+        if (newRight > currentScore.right) {
+            scoreAnimations.right.time = SCORE_ANIMATION_DURATION;
+            scoreAnimations.right.scale = 1;
+        }
+        
+        currentScore.left = newLeft;
+        currentScore.right = newRight;
         updateScoreDisplays();
     }
 
@@ -492,13 +575,22 @@ export function updateGameState(gameSettings, paddleL, paddleR, ballX, ballY) {
 export function animate() {
     if (!scene || !camera || !renderer) return;
     
+    const deltaTime = 1/60; // Assuming 60fps, could use actual delta time if needed
+    
     requestAnimationFrame(animate);
     controls?.update();
     updateStarfield();
     updateBallTrail();
     updateImpactParticles();
     updateCameraShake();
-    renderer.render(scene, camera);
+    
+    // Update score animations
+    if (updateScoreAnimations(deltaTime)) {
+        // Only render if animations are active
+        renderer.render(scene, camera);
+    } else {
+        renderer.render(scene, camera);
+    }
 }
 
 export function resizeRenderer(width, height) {
@@ -570,6 +662,11 @@ export function cleanup() {
     });
     impactParticles = [];
     cameraShakeIntensity = 0;
+
+    scoreAnimations = {
+        left: { scale: 1, time: 0 },
+        right: { scale: 1, time: 0 }
+    };
 }
 
 function updateBallTrail() {
