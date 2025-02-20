@@ -8,6 +8,7 @@ let scene, camera, renderer, controls, ball, playerPaddle, player2Paddle;
 let playerScoreText, player2ScoreText;
 let font;
 let currentScore = { left: 0, right: 0 };
+let starfield;
 
 export function initGame3D(canvas) {
     // Initialize renderer with explicit pixel ratio and size handling
@@ -30,10 +31,10 @@ export function initGame3D(canvas) {
 
     // Scene with darker background
     scene = new THREE.Scene();
-    scene.background = new THREE.Color('rgb(77, 76, 76)');
+    scene.background = new THREE.Color(0x000814);  // Very dark blue, almost black
 
     // Enhanced lighting
-    const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+    const ambientLight = new THREE.AmbientLight(0x404040, 1);  // Increased intensity
     scene.add(ambientLight);
     
     const mainLight = new THREE.DirectionalLight(0xffffff, 1);
@@ -151,11 +152,13 @@ export function initGame3D(canvas) {
 
     // Walls (match world dimensions)
     const wallMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0x444444,
-        metalness: 0.5,
-        roughness: 0.5,
-        emissive: 0x222222,
-        emissiveIntensity: 0.5
+        color: 0x0066ff,  // Bright blue color
+        metalness: 0.3,
+        roughness: 0.4,
+        emissive: 0x001133,  // Slight blue glow
+        emissiveIntensity: 0.5,
+        transparent: true,
+        opacity: 0.8
     });
 
     const topWall = new THREE.Mesh(new THREE.BoxGeometry(worldWidth, 0.5, 0.1), wallMaterial);
@@ -174,6 +177,17 @@ export function initGame3D(canvas) {
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
+    // Create starfield before loading font
+    createStarfield();
+    
+    // Load Font and create score displays
+    const fontLoader = new FontLoader();
+    fontLoader.load('https://threejs.org/examples/fonts/helvetiker_bold.typeface.json', (loadedFont) => {
+        font = loadedFont;
+        createScoreDisplays();
+        createInstructionsText(canvas.max_score);
+    });
+
     // Camera - adjust to view from front
     camera = new THREE.PerspectiveCamera(60, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
     camera.position.set(0, 8, 12); // Position camera in front
@@ -187,14 +201,44 @@ export function initGame3D(canvas) {
     controls.minDistance = 5;
     controls.maxDistance = 15;
     controls.maxPolarAngle = Math.PI / 2;
+}
 
-    // Load Font and create score displays
-    const fontLoader = new FontLoader();
-    fontLoader.load('https://threejs.org/examples/fonts/helvetiker_bold.typeface.json', (loadedFont) => {
-        font = loadedFont;
-        createScoreDisplays();
-        createInstructionsText(canvas.max_score);
+function createStarfield() {
+    const starsGeometry = new THREE.BufferGeometry();
+    const starCount = 2000;
+    const positions = [];
+    
+    for (let i = 0; i < starCount; i++) {
+        // Random position in a large sphere
+        const radius = Math.random() * 100 + 50;  // Between 50 and 150
+        const theta = Math.random() * Math.PI * 2;  // Around the sphere
+        const phi = Math.acos((Math.random() * 2) - 1);  // Up and down
+        
+        positions.push(
+            radius * Math.sin(phi) * Math.cos(theta),  // x
+            radius * Math.sin(phi) * Math.sin(theta),  // y
+            radius * Math.cos(phi)                     // z
+        );
+    }
+    
+    starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    
+    const starsMaterial = new THREE.PointsMaterial({
+        color: 0xFFFFFF,
+        size: 0.5,
+        sizeAttenuation: true,  // Enable size attenuation
     });
+    
+    starfield = new THREE.Points(starsGeometry, starsMaterial);
+    scene.add(starfield);
+}
+
+function updateStarfield() {
+    if (!starfield) return;
+    
+    // Rotate the starfield slowly
+    starfield.rotation.y += 0.0001;
+    starfield.rotation.x += 0.0001;
 }
 
 function createScoreDisplays() {
@@ -312,11 +356,12 @@ export function updateGameState(gameSettings, paddleL, paddleR, ballX, ballY) {
 }
 
 export function animate() {
-    if (!renderer || !scene || !camera) return;
+    if (!scene || !camera || !renderer) return;
     
+    requestAnimationFrame(animate);
     controls?.update();
+    updateStarfield();
     renderer.render(scene, camera);
-    window.animationFrameId = requestAnimationFrame(animate);
 }
 
 export function resizeRenderer(width, height) {
