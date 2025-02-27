@@ -82,7 +82,9 @@ services:
     container_name: nginx
     ports:
       - "8080:80"
-      - "8081:443"
+      - "443:443"
+    expose:
+      - "443"
     depends_on:
       - ${LOBBY_API_NAME}
       - gameplay

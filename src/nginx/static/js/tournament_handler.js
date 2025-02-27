@@ -124,6 +124,7 @@ export function joinTournament()
         }
         else if (data.type == 'p1_round2')
         {
+          console.log(data);
           start_1.textContent = 'Start';
           start_1.classList.remove('fighting');
           p1_2.textContent = data.p1_round2;
@@ -132,6 +133,7 @@ export function joinTournament()
         }
         else if (data.type == 'p2_round2')
         {
+          console.log(data);
           start_2.textContent = 'Start';
           start_2.classList.remove('fighting');
           p2_2.textContent = data.p2_round2;
