@@ -1,6 +1,10 @@
 from channels.generic.websocket import AsyncWebsocketConsumer
 # from .signals import game_update_signal, game_init_signal, game_end_signal
 import asyncio, time, json, httpx
+from urllib.parse import unquote
+
+from django.conf import settings
+
 # import logging
 # logger = logging.getLogger(__name__)
 
@@ -66,7 +70,12 @@ class PongGame(AsyncWebsocketConsumer):
 		self.max_score = int(self.scope['url_route']['kwargs']['max_score'])
 		query_string = self.scope["query_string"].decode()
 		query_params = dict(qc.split("=") for qc in query_string.split("&") if "=" in qc)
-		self.token = query_params.get("token")
+		self.token = unquote(query_params["token"]) if "token" in query_params else None
+		self.p1 = unquote(query_params["p1"]) if "p1" in query_params else None
+		self.p2 = unquote(query_params["p2"]) if "p2" in query_params else None
+		self.p3 = unquote(query_params["p3"]) if "p3" in query_params else None
+		self.p4 = unquote(query_params["p4"]) if "p4" in query_params else None
+		self.lobby_name = unquote(query_params["lobby_name"]) if "lobby_name" in query_params else None
 		self.lobby_group_name = f"lobby_{self.lobby_id}"
 		self.cookies = self.scope.get('cookies', {})
 		self.csrf_token = self.cookies.get('csrftoken', None)
@@ -75,7 +84,7 @@ class PongGame(AsyncWebsocketConsumer):
 		if self.token:
 			async with httpx.AsyncClient() as client:
 				response = await client.get(
-                    "http://nginx:80/user-api/profile/",
+                    "http://userdata:8004/user-api/profile/",
                     headers={
                         'Content-Type': 'application/json',
                         'Authorization': f'Bearer {self.token}',
@@ -158,7 +167,6 @@ class PongGame(AsyncWebsocketConsumer):
 					self.game_session = self.GameSessions[self.lobby_group_name]
 					self.game_session.player_count += 1
 					if self.game_session.player_count == self.game_session.max_player_count:
-						# logger.debug("all players connected")
 						self.game_session.streaming = True
 						self.game_task = asyncio.create_task(self.pong())
 					# await self.send(text_data=json.dumps({'type': 'player_joined', 'status': 'success'}))
@@ -174,19 +182,16 @@ class PongGame(AsyncWebsocketConsumer):
 		# This is called when the WebSocket connection is closed
 		if self.game_session is not None:
 			self.game_session.player_count -= 1
-			# logger.debug("self.game_session.streaming: %s", self.game_session.streaming)
 			if self.game_session.player_count == 0:
 				if self.lobby_group_name in self.GameSessions:
 					del self.GameSessions[self.lobby_group_name]
-				# logger.debug("Deleting lobby....")
 				if str(self.lobby_id).isdigit():
-					url = f"http://nginx:80/lobby/players/{self.lobby_id}/"
+					url = f"http://lobby_api:8002/lobby/players/{self.lobby_id}/"
 					async with httpx.AsyncClient() as client:
 						response = await client.get(url)
-					# if response.status_code != 200:
-					# 	logger.debug(f"Failed to get players.")
+					
 					roles = response.json()
-					url = f"http://nginx:80/user-api/addgame/"
+					url = f"http://userdata:8004/user-api/addgame/"
 					async with httpx.AsyncClient() as client:
 						response = await client.post(url, 
 									json={'gameMode': 'two-player-pong',
@@ -197,12 +202,27 @@ class PongGame(AsyncWebsocketConsumer):
         	    					    'Content-Type': 'application/json',
                 	        			'Authorization': f'Bearer {self.token}',
         	    					    'X-CSRFToken': self.token,
+										'Microservice-Token' : getattr(settings, "MICROSERVICE_SECRET_TOKEN", None)
         	    					},
         	    					cookies=self.cookies,
 									)
-					# if response.status_code != 201:
-					# 	logger.debug(f"Failed to send score")
-						# return
+				elif 'game_3' in self.lobby_id:
+					url = f"http://userdata:8004/user-api/addgame/"
+					async with httpx.AsyncClient() as client:
+						response = await client.post(url, 
+									json={'gameMode': 'four-player-tournament',
+					   					'players':[self.p1, self.p2, self.p3, self.p4],
+										'score': [self.game_session.Lscore, self.game_session.Rscore, 0, 0],
+										'lobbyName': self.lobby_name,
+					   					},
+        	    					headers={
+        	    					    'Content-Type': 'application/json',
+                	        			'Authorization': f'Bearer {self.token}',
+        	    					    'X-CSRFToken': self.token,
+										'Microservice-Token' : getattr(settings, "MICROSERVICE_SECRET_TOKEN", None)
+        	    					},
+        	    					cookies=self.cookies,
+									)
 			else:
 				await self.channel_layer.group_send(
         			self.lobby_group_name,

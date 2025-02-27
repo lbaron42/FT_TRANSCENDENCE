@@ -6,6 +6,7 @@ services:
     command: daphne -b 0.0.0.0 -p ${GAMEPLAY_PORT} PongBackend.asgi:application
     environment:
       GAMEPLAY_SECRET_KEY: ${GAMEPLAY_SECRET_KEY}
+      MICROSERVICE_SECRET_TOKEN: ${MICROSERVICE_SECRET_TOKEN}
     networks:
       - app-network
       - gameplay-redis-network
@@ -80,7 +81,8 @@ services:
     build: ./nginx
     container_name: nginx
     ports:
-      - "8000:80"  
+      - "8080:80"
+      - "8081:443"
     depends_on:
       - ${LOBBY_API_NAME}
       - gameplay

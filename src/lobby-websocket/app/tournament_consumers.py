@@ -2,8 +2,8 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 import json
 import httpx
 import random
-import logging
-logger = logging.getLogger(__name__)
+# import logging
+# logger = logging.getLogger(__name__)
 
 class PlayerSlots:
     def __init__(self):
@@ -46,7 +46,6 @@ class TournamentConsumer(AsyncWebsocketConsumer):
 	################## CONNECT ##################
 
     async def connect(self):
-        logger.debug("in connect")
         self.lobby_id = self.scope['url_route']['kwargs']['lobby_id']
         self.user_name = self.scope["url_route"]["kwargs"]["user_name"]
         query_string = self.scope["query_string"].decode()
@@ -59,12 +58,10 @@ class TournamentConsumer(AsyncWebsocketConsumer):
         self.lobby_session = None
         self.roles = {"p1": None, "p2": None, "p3": None, "p4": None}
 
-        logger.debug("self.token:")
-        logger.debug(self.token)
         if self.token:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
-                    "http://nginx:80/user-api/profile/",
+                    "http://userdata:8004/user-api/profile/",
                     headers={
                         'Content-Type': 'application/json',
                         'Authorization': f'Bearer {self.token}',
@@ -72,13 +69,10 @@ class TournamentConsumer(AsyncWebsocketConsumer):
                     },
                     cookies=self.cookies,
                 )
-                logger.debug("response.statuscode:")
-                logger.debug(response.status_code)
                 if response.status_code != 200:
                     await self.close(code=4001)
                     return
         else:
-            logger.debug("in else:")
             await self.close(code=4001)
             return
         
@@ -94,8 +88,6 @@ class TournamentConsumer(AsyncWebsocketConsumer):
         # Handle messages from the WebSocket
         data = json.loads(text_data)
         action = data.get('action')
-        logger.debug("in receive")
-        logger.debug(data)
         if action == 'player_joined':
             if self.lobby_group_name not in self.LobbySessions:
                 self.LobbySessions[self.lobby_group_name] = LobbySession()
@@ -185,7 +177,15 @@ class TournamentConsumer(AsyncWebsocketConsumer):
                 {
                     'type': 'send_p1_round2',
                     'p1_round2' : self.lobby_session.players2.p1,
+                    'p3_round2' : self.lobby_session.players2.p3,
                 }
+                )
+                await self.send_2players(
+                self.lobby_session.player_names.get(self.lobby_session.players.p3),
+                self.lobby_session.players.p3,
+                self.lobby_session.player_names.get(self.lobby_session.players.p4), 
+                self.lobby_session.players.p4,
+                'enable_start_2'
                 )
             elif game_id == 'game_2':
                 if winner == 'p1':
@@ -199,6 +199,7 @@ class TournamentConsumer(AsyncWebsocketConsumer):
                 {
                     'type': 'send_p2_round2',
                     'p2_round2' : self.lobby_session.players2.p2,
+                    'p4_round2' : self.lobby_session.players2.p4,
                 }
                 )
             elif game_id == 'game_3':
@@ -284,13 +285,13 @@ class TournamentConsumer(AsyncWebsocketConsumer):
             self.lobby_session.players.p2,
             'enable_start_1'
         )
-        await self.send_2players(
-            self.lobby_session.player_names.get(self.lobby_session.players.p3),
-            self.lobby_session.players.p3,
-            self.lobby_session.player_names.get(self.lobby_session.players.p4), 
-            self.lobby_session.players.p4,
-            'enable_start_2'
-        )
+        # await self.send_2players(
+        #     self.lobby_session.player_names.get(self.lobby_session.players.p3),
+        #     self.lobby_session.players.p3,
+        #     self.lobby_session.player_names.get(self.lobby_session.players.p4), 
+        #     self.lobby_session.players.p4,
+        #     'enable_start_2'
+        # )
     
     async def send_start_tournament(self, event):
         await self.send(text_data=json.dumps({
@@ -419,7 +420,7 @@ class TournamentConsumer(AsyncWebsocketConsumer):
         }))
 
     async def player_joined(self):
-        url = f"http://nginx:80/lobby/player_joined/{self.lobby_id}/{self.user_name}/"
+        url = f"http://lobby_api:8002/lobby/player_joined/{self.lobby_id}/{self.user_name}/"
         async with httpx.AsyncClient() as client:
             response = await client.post(url, data={'key': 'value'})
             if response.status_code != 200:
@@ -430,8 +431,6 @@ class TournamentConsumer(AsyncWebsocketConsumer):
 	################## DISCONNECT ##################
 
     async def disconnect(self, close_code):
-        logger.debug("in disconnect")
-        logger.debug(self.lobby_session)
         if self.lobby_session is not None:
             if await self.player_left() == 0:
                 await self.delete_lobby_entry()
@@ -442,7 +441,7 @@ class TournamentConsumer(AsyncWebsocketConsumer):
         )
 
     async def player_left(self):
-        url = f"http://nginx:80/lobby/player_left/{self.lobby_id}/{self.user_name}/"
+        url = f"http://lobby_api:8002/lobby/player_left/{self.lobby_id}/{self.user_name}/"
         async with httpx.AsyncClient() as client:
             response = await client.post(url, data={'key': 'value'})
             if response.status_code != 200:
@@ -473,7 +472,7 @@ class TournamentConsumer(AsyncWebsocketConsumer):
 
 
     async def delete_lobby_entry(self):
-        url = f"http://nginx:80/lobby/delete/{self.lobby_id}/"
+        url = f"http://lobby_api:8002/lobby/delete/{self.lobby_id}/"
         async with httpx.AsyncClient() as client:
             response = await client.post(
                     url,

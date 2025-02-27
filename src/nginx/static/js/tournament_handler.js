@@ -1,22 +1,21 @@
 import { startTournamentGame } from "./game-handling-tournament.js";
 import { lobby_socket, name, initLobbySocket, customAlert, closeSockets } from "./globals.js";
 import { lobbyFull } from "./lobby-creation.js";
+import { navigateTo } from "./routing.js";
 
-export function joinLocalTournament(lobby_id, lobby_name, max_score)
+export function joinTournament()
 {
-    customAlert("no join tournament yet ");
-}
-
-export function joinTournament(lobby_id, lobby_name, max_score)
-{
-    lobbyFull(lobby_id).then(is_full => {
+    lobbyFull(window.lobby_id).then(is_full => {
         if (is_full) {
-          customAlert('Lobby is full. Cannot join.');
+          customAlert('Lobby is full or does not exist anymore. Cannot join.');
+          navigateTo("/");
           return;
         }
     })
 
-    initLobbySocket(`/ws/lobby/tournament/${lobby_id}/${name}/`)
+    // navigateTo("/tournament");
+
+    initLobbySocket(`/ws/lobby/tournament/${window.lobby_id}/${name}/`)
 
     const playerContainer = document.getElementById('player-container');
     const tournamentContainer = document.getElementById('tournament-container');
@@ -31,6 +30,8 @@ export function joinTournament(lobby_id, lobby_name, max_score)
     const p4 = document.getElementById('p4-round1');
     const p1_2 = document.getElementById('p1-round2');
     const p2_2 = document.getElementById('p2-round2');
+    let p3_2 = 'none'
+    let p4_2 = 'none'
 
     const start_tournament = document.getElementById('start_tournament');
     const start_1 = document.getElementById('start-1');
@@ -40,23 +41,22 @@ export function joinTournament(lobby_id, lobby_name, max_score)
 
     lobby_socket.onopen = () => {
         console.log("Tournament lobby connected");
-        tournamentHeader.textContent = `Tournament: ${lobby_name}`;
+        tournamentHeader.textContent = `Tournament: ${window.lobby_name}`;
         lobby_socket.send(JSON.stringify({
             action: 'player_joined',
           })
         );
-        document.querySelectorAll('.online').forEach(content => 
-          {
-            content.classList.remove('active');
-          }
-        );
-        tournamentDiv.classList.add('active');
+        // document.querySelectorAll('.online').forEach(content => 
+        //   {
+        //     content.classList.remove('active');
+        //   }
+        // );
+        // tournamentDiv.classList.add('active');
+        
     }
 
     lobby_socket.onmessage = (e) => {
         const data = JSON.parse(e.data);
-        console.log(data);
-        console.log(data.type);
         if (data.type == 'update_players')
         {
           playerContainer.innerHTML = '';
@@ -110,23 +110,24 @@ export function joinTournament(lobby_id, lobby_name, max_score)
         else if (data.type == 'start_1')
         {
           disableStartButton(start_1);
-          startTournamentGame(lobby_id + `game_1`, `game_1`, data.roles.p1 == name ? 'p1' : 'p2', 2, data.roles, max_score);
+          startTournamentGame(window.lobby_id + `game_1`, `game_1`, data.roles.p1 == name ? 'p1' : 'p2', data.roles, window.max_score, p1.textContent, p2.textContent, p3.textContent, p4.textContent, window.lobby_name);
         }
         else if (data.type == 'start_2')
         {
           disableStartButton(start_2);
-          startTournamentGame(lobby_id + `game_2`, `game_2`, data.roles.p1 == name ? 'p1' : 'p2', 2, data.roles, max_score);
+          startTournamentGame(window.lobby_id + `game_2`, `game_2`, data.roles.p1 == name ? 'p1' : 'p2', data.roles, window.max_score, p3.textContent, p4.textContent, p1.textContent, p2.textContent, window.lobby_name);
         }
         else if (data.type == 'start_3')
         {
           disableStartButton(start_3);
-          startTournamentGame(lobby_id + `game_3`, `game_3`, data.roles.p1 == name ? 'p1' : 'p2', 2, data.roles, max_score);
+          startTournamentGame(window.lobby_id + `game_3`, `game_3`, data.roles.p1 == name ? 'p1' : 'p2', data.roles, window.max_score, p1_2.textContent, p2_2.textContent, p3_2, p4_2, window.lobby_name);
         }
         else if (data.type == 'p1_round2')
         {
           start_1.textContent = 'Start';
           start_1.classList.remove('fighting');
           p1_2.textContent = data.p1_round2;
+          p3_2 = data.p3_round2;
           disableStartButton(start_1);
         }
         else if (data.type == 'p2_round2')
@@ -134,6 +135,7 @@ export function joinTournament(lobby_id, lobby_name, max_score)
           start_2.textContent = 'Start';
           start_2.classList.remove('fighting');
           p2_2.textContent = data.p2_round2;
+          p4_2 = data.p4_round2;
           disableStartButton(start_2);
         }
         else if (data.type == 'winner')
@@ -159,12 +161,13 @@ export function joinTournament(lobby_id, lobby_name, max_score)
     }
     lobby_socket.onclose = () => {
 
-      document.querySelectorAll('.online').forEach(content => 
-        {
-          content.classList.remove('active');
-        }
-      );
-      document.getElementById('option-choose').classList.add('active');
+      // document.querySelectorAll('.online').forEach(content => 
+      //   {
+      //     content.classList.remove('active');
+      //   }
+      // );
+      // document.getElementById('option-choose').classList.add('active');
+      navigateTo("/");
     }
 } 
 

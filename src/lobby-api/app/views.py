@@ -2,10 +2,10 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.db import IntegrityError
 from .models import Lobby
-import logging
 import requests
 
-logger = logging.getLogger(__name__)
+# import logging
+# logger = logging.getLogger(__name__)
 
 def create_lobby(request):
     if request.method == 'POST':
@@ -16,15 +16,12 @@ def create_lobby(request):
         pac_pong = request.POST.get('pong-mode') == '1'
         mode = int(request.POST.get('mode'))
         cur_player = 0
-        if (mode == 1):
-            cur_player = 1
-        elif pac_pong:
+        if (pac_pong and mode is not 1):
             mode = 3
-        if(tournament_mode):
+        elif(tournament_mode):
             mode = 4
-        raw_password = request.POST.get('lobby_password', '')
         auth_response = requests.get(
-            "http://nginx:80/user-api/profile/",
+            "http://userdata:8004/user-api/profile/",
             headers = {
                 'Content-Type': 'application/json',
                 'Authorization': request.headers.get('Authorization'),
@@ -44,8 +41,6 @@ def create_lobby(request):
                 tournament_mode=tournament_mode,
                 pac_pong=pac_pong
                 )
-            if raw_password:
-                lobby.set_password(raw_password)
             lobby.save()
 
             return JsonResponse(
@@ -75,7 +70,6 @@ def get_lobby(request, lobby_id):
                 'max_player_count': lobby.max_player_count,
                 'p1': lobby.p1,
                 'p2': lobby.p2,
-                'password_protected': bool(lobby.password),
                 'max_score': lobby.max_score,
                 'tournament_mode': lobby.tournament_mode,
                 'pac_pong': lobby.pac_pong,
@@ -101,7 +95,6 @@ def all(request):
                 'max_player_count': lobby.max_player_count,
                 'p1': lobby.p1,
                 'p2': lobby.p2,
-                'password_protected': bool(lobby.password), 
                 'max_score': lobby.max_score,
                 'tournament_mode': lobby.tournament_mode,
                 'pac_pong': lobby.pac_pong,
@@ -156,11 +149,8 @@ def player_left(request, lobby_id, user_name):
 
 def delete_lobby_entry(request, lobby_id):
     if request.method == "POST":
-        csrf_token = request.POST.get('csrf_token')
-        if not csrf_token:
-            csrf_token = request.headers.get('X-CSRFToken')
         auth_response = requests.get(
-            "http://nginx:80/user-api/profile/",
+            "http://userdata:8004/user-api/profile/",
             headers = {
                 'Content-Type': 'application/json',
                 'Authorization': request.headers.get('Authorization'),

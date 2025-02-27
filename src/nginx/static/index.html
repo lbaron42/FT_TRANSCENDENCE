@@ -1,255 +1,79 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Transcendence</title>
-  <!-- Multiple CSS files for styling different parts of the application -->
-  <link rel="stylesheet" href="./css/main.css" />
-  <link rel="stylesheet" href="./css/game_3d.css" />
-  <link rel="stylesheet" href="./css/game-modes.css" />
-  <link rel="stylesheet" href="./css/navbar.css" />
-  <link rel="stylesheet" href="./css/login.css" />
-  <link rel="stylesheet" href="./css/pop-up.css" />
-  <!-- Import map for Three.js modules -->
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@v0.170.0/build/three.module.js",
-        "three/addons/": "https://cdn.jsdelivr.net/npm/three@v0.170.0/examples/jsm/"
-      }
-    }
-  </script>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Transcendence</title>
+	<link rel="stylesheet" href="./css/main.css">
+	<link rel="stylesheet" href="./css/game_3d.css">
+	<link rel="stylesheet" href="./css/game-modes.css">
+	<link rel="stylesheet" href="./css/navbar.css">
+	<link rel="stylesheet" href="./css/login.css">
+	<link rel="stylesheet" href="./css/pop-up.css">
+  <link rel="stylesheet" href="./css/profile.css">
+    <script type="importmap">
+        {
+          "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@v0.170.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@v0.170.0/examples/jsm/"
+          }
+        }
+    </script>
 </head>
 <body>
   <div class="navbar">
     <div>
-      <h1>PacPong</h1>
+      <h1 id="go-back">PacPong</h1>
     </div>
     <div>
-      <button id="login-button">Login</button>
-      <button id="logout-button" style="display:none;">Logout</button>
-      <hr />
-      <button id="signup-button">Sign Up</button>
-      <button id="profile-button" style="display:none;">Profile</button>
-    </div>
-  </div>
-  <main>
-    <div>
-      <div class="game-selector active" id="online">
-        <div class="online active" id="option-choose">
-          <button id="prepare-lobby">Create Lobby</button>
-          <button id="list-lobbies">Join Lobby</button>
-          <!-- <img src="/svg/lock.svg" alt="locked"> -->
-        </div>
-        <div class="online" id="lobby-list"><p>test</p></div>
-        <form class="online" id="lobby-form">
-          <h2>Create a Lobby:</h2>
-          <div>
-            <label for="lobby-name">Lobby Name:</label>
-            <input type="text" id="lobby-name" name="lobby-name" required />
-          </div>
-          <div>
-            <div id="mode-options">
-              <label class="score-option">
-                <input type="radio" name="mode" value="1" checked />
-                <span>local</span>
-              </label>
-              <label class="score-option">
-                <input type="radio" name="mode" value="2" />
-                <span>online</span>
-              </label>
-            </div>
-          </div>
-          <div>
-            <div id="pong-modes">
-              <label class="score-option">
-                <input type="radio" name="pong-mode" value="0" checked />
-                <span>Pong</span>
-              </label>
-              <label class="score-option">
-                <input type="radio" name="pong-mode" value="1" />
-                <span>PacPong</span>
-              </label>
-            </div>
-          </div>
-          <div class="active" id="tournament-check">
-            <label for="tournament-mode">Tournament Mode:</label>
-            <input type="checkbox" name="tornament-mode" id="tournament-mode" />
-          </div>
-          <div>
-            <label for="score-options">Score:</label>
-            <div id="score-options">
-              <label class="score-option">
-                <input type="radio" name="score" value="3" checked />
-                <span>3</span>
-              </label>
-              <label class="score-option">
-                <input type="radio" name="score" value="5" />
-                <span>5</span>
-              </label>
-              <label class="score-option">
-                <input type="radio" name="score" value="10" />
-                <span>10</span>
-              </label>
-            </div>
-          </div>
-          <div>
-            <label for="lobby-password">password:</label>
-            <input type="password" id="lobby-password" name="lobby_password" placeholder="Leave empty for no password" />
-          </div>
-          <button type="submit">Create</button>
-        </form>
-        <div class="online" id="tournament">
-          <div id="tournament-prep">
-            <h2 id="tournament-header">Tournament: </h2>
-            <h3 id="players-header">Players: </h3>
-            <div id="player-container"></div>
-          </div>
-          <div id="tournament-container" class="disable">
-            <div>
-              <div>
-                <button class="player_button" id="p1-round1">Name 1</button>
-                <button id="start-1">Start</button>
-                <button class="player_button" id="p2-round1">Name 2</button>
-              </div>
-              <div>
-                <button class="player_button" id="p3-round1">Name 3</button>
-                <button id="start-2">Start</button>
-                <button class="player_button" id="p4-round1">Name 4</button>
-              </div>
-            </div>
-            <div>
-              <div>
-                <button class="player_button" id="p3-round1">Name 3</button>
-                <button class="player_button" id="start-2">Start</button>
-                <button class="player_button" id="p4-round1">Name 4</button>
-              </div>
-            </div>
-            <div></div>
-          </div>
-          <button class="start_button" id="start_tournament">Start Tournament</button>
-        </div>
-        <div class="online" id="lobby">
-          <h2 id="lobby-header">Lobby: </h2>
-          <div>
-            <button class="player_button" id="p1"><p>P1</p></button>
-            <button class="player_button" id="p3"><p>PacMan</p></button>
-            <button class="player_button" id="p2"><p>P2</p></button>
-          </div>
-          <button class="start_button" id="start_game">Start Game</button>
-        </div>
-        <div class="online" id="game">
-          <p id="score">Left: 0 | Right: 0</p>
-          <div id="draw-type">
-            <p id="3d">3d</p>
-            <p id="2d" class="active">2d</p>
-          </div>
-          <!-- 2D game canvas is visible by default -->
-          <canvas id="game-canvas"></canvas>
-          <!-- 3D game canvas is added but hidden by default -->
-          <canvas id="three-canvas" style="display:none;"></canvas>
-        </div>
-      </div>
+      <button id="login-button" class="start_button start_enabled">Login</button>
+      <button id="logout-button" class="start_button start_enabled" style="display:none;">Logout</button>
+      <hr>
+      <button id="signup-button" class="start_button start_enabled">Sign Up</button>
+      <button id="profile-button" class="start_button start_enabled" style="display:none;">Profile</button>
+      <button id="settings-button" class="start_button start_enabled" style="display:none;">Settings</button>
     </div>
 
-    <!-- <button id="test-api">Test API</button> -->
-    <pre id="output"></pre>
+  </div>
+  <main>
+    <div id="app">
+    </div>
+
     <div class="sign sign-background active" id="sign-background"></div>
-    <div class="sign active" id="sign">
+    <div class="sign active " id="sign">
       <form class="sign-in active" id="login-form">
         <h2>Login</h2>
-        <input type="text" name="username" placeholder="Username" required />
-        <input type="password" name="password" placeholder="Password" required />
-        <button type="submit">Log In</button>
+            <input type="text" name="username" placeholder="Username" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <button type="submit" class="start_button start_enabled">Log In</button>
         <p>Don't have an account? <span id="signup-link">Sign Up</span></p>
       </form>
       <form class="sign-in" id="signup-form">
         <h2>Sign Up</h2>
-        <input type="text" name="username" placeholder="Username" required />
-        <input type="email" name="email" placeholder="Email" required />
-        <input type="password" name="password" placeholder="Password" required />
-        <button type="submit">Sign Up</button>
+            <input type="text" name="username" placeholder="Username" required>
+            <input type="email" name="email" placeholder="Email" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <button type="submit" class="start_button start_enabled">Sign Up</button>
         <p>Already have an account? <span id="login-link">Log In</span></p>
       </form>
-    </div>
+     </div>
      <div class="sign sign-background" id="alert-background" ></div>
      <div class="sign" id="alert">
       <div class="sign-in active" id="alert-div"></div>
      </div>
+    
   </main>
-
-  <!-- Note: The direct script inclusion for game_3d.js has been removed.
-       The remaining scripts provide globals, game handling, lobby management, etc. -->
+	
+  <!-- <script type="module" src="./js/game_3d.js"></script> -->
+  <!-- <script type="module" src="./js/auth.js"></script> -->
   <script type="module" src="./js/globals.js"></script>
   <script type="module" src="./js/game-handling.js"></script>
   <script type="module" src="./js/lobby-creation.js"></script>
   <script type="module" src="./js/lobby-handling.js"></script>
   <script type="module" src="./js/index.js"></script>
-  
-  <!-- Modify the script that handles 3D/2D switching -->
-  <script type="module">
-    const threeDButton = document.getElementById('3d');
-    const twoDButton = document.getElementById('2d');
-    const canvas2d = document.getElementById('game-canvas');
-    const canvas3d = document.getElementById('three-canvas');
-
-    threeDButton.addEventListener('click', async () => {
-      // Set active state on the UI
-      threeDButton.classList.add('active');
-      twoDButton.classList.remove('active');
-      
-      // Hide the 2D canvas and show the 3D canvas
-      canvas2d.style.display = 'none';
-      canvas3d.style.display = 'block';
-      
-      // Set the 3D canvas size to match the 2D canvas
-      canvas3d.width = canvas2d.width;
-      canvas3d.height = canvas2d.height;
-      
-      // Dynamically import and initialize the 3D game module
-      const game3dModule = await import('./js/game_3d.js');
-      
-      // Clean up any existing 3D resources before initializing
-      game3dModule.cleanup();
-      
-      // Small delay to ensure cleanup is complete
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      gameSettings.contextType = '3d';  // Update the context type
-      
-      // Initialize the 3D game with explicit canvas size
-      game3dModule.initGame3D(canvas3d);
-      game3dModule.resizeRenderer(canvas3d.clientWidth, canvas3d.clientHeight);
-      game3dModule.animate();
-    });
-
-    twoDButton.addEventListener('click', async () => {
-      twoDButton.classList.add('active');
-      threeDButton.classList.remove('active');
-      canvas3d.style.display = 'none';
-      canvas2d.style.display = 'block';
-      gameSettings.contextType = '2d';
-      
-      // Clean up 3D resources
-      const game3dModule = await import('./js/game_3d.js');
-      game3dModule.cleanup();
-    });
-
-    // Fix the resize handler
-    let resizeTimeout;
-    window.addEventListener('resize', () => {
-      // Debounce resize events
-      clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(async () => {
-        if (gameSettings.contextType === '3d') {
-          const game3dModule = await import('./js/game_3d.js');
-          game3dModule.resizeRenderer(canvas3d.clientWidth, canvas3d.clientHeight);
-        }
-      }, 100);
-    });
-  </script>
+  <script type="module" src="./js/routing.js"></script>
+<!--   <script type="module" src="./js/profile.js"></script>
+ -->
 </body>
 </html>
-

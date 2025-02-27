@@ -50,19 +50,7 @@ class Lobby(models.Model):
         null=True,
         help_text="The third player in the lobby."
     )
-    password = models.CharField(
-        max_length=128, 
-        blank=True, 
-        null=True, 
-        help_text="Optional password for private lobbies."
-    )
 
-    def set_password(self, raw_password):
-        self.password = make_password(raw_password)
-
-    def check_password(self, raw_password):
-        return check_password(raw_password, self.password)
-    
     def __str__(self):
         return self.name
     

@@ -1,7 +1,9 @@
 import {getCSRFToken, getAccessToken} from './auth.js';
+import { customAlert } from './globals.js';
 import {refreshAccessToken} from './profile.js';
+import { navigateTo } from './routing.js';
 
-document.addEventListener('DOMContentLoaded', function() {
+export function loadSettings(){
     loadCurrentUserData();
 
     const form = document.getElementById('update-form');
@@ -9,11 +11,7 @@ document.addEventListener('DOMContentLoaded', function() {
         event.preventDefault();
         updateUserData();
     });
-});
-
-document.getElementById('back-button').addEventListener('click', () => {
-    window.location.href = 'profile.html';
-});
+}
 
 function loadCurrentUserData() {
     const accessToken = getAccessToken();
@@ -101,11 +99,11 @@ function updateUserData() {
         }
         if (!response.ok) return response.json().then(data => { throw new Error(data.error || 'Failed to update profile'); });
 
-        alert('Profile updated successfully!');
-        window.location.href = 'profile.html';
+        customAlert('Profile updated successfully!');
+        navigateTo("/profile");
     })
     .catch(error => {
         console.error('Error updating profile:', error);
-        alert(error.message || 'Failed to update profile.');
+        customAlert(error.message || 'Failed to update profile.');
     });
 }

@@ -9,12 +9,13 @@ from rest_framework import status
 from rest_framework.response import Response
 from django.contrib.auth.models import User
 from django.http import HttpResponse, Http404
+from django.db.models import Q
 from .models import Profile, FriendRequest, TwoFactorCode
 from .serializers import UserSerializer, ProfileSerializer, FriendSerializer, FriendRequestSerializer, TokenWith2FASerializer
 from django.middleware.csrf import get_token
 from rest_framework.decorators import api_view, parser_classes, permission_classes
 from rest_framework import viewsets
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -97,6 +98,8 @@ def login_view(request):
 				"username": user.username
 			}, status=status.HTTP_200_OK)
 
+		user.profile.online_status = True
+		user.profile.save(update_fields=["online_status"])
 		tokens = create_tokens(user, two_fa_status=True)
 		login(request, user)
 		return Response({
@@ -152,14 +155,15 @@ def logout_view(request):
 			except Exception as e:
 				logger.warning(f"Failed to blacklist token: {e}")
 
+		request.user.profile.online_status = False
+		request.user.profile.save(update_fields=["online_status"])
+
 		logout(request)
 		return Response({"message": "Logged out successfully"}, status=status.HTTP_200_OK)
 
 	except Exception as e:
 		logger.error(f"Logout error: {e}")
 		return Response({"error": "Logout failed"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -189,6 +193,7 @@ def profile_view(request):
 		data['username'] = user.username
 		data['display_name'] = profile.display_name if hasattr(profile, 'display_name') else user.username
 
+		data['online_status'] = profile.online_status
 		return Response(data, status=status.HTTP_200_OK)
 	except Profile.DoesNotExist:
 		return Response({"error": "Profile not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -223,7 +228,7 @@ def upload_avatar(request):
 
 	if not file:
 		return Response({'error': 'No avatar provided'}, status=status.HTTP_400_BAD_REQUEST)
-	
+
 	if profile.avatar:
 		try:
 			profile.avatar.delete(save=False)
@@ -243,7 +248,7 @@ def download_avatar(request):
 		with open(avatar_path, 'rb') as avatar_file:
 			return HttpResponse(avatar_file.read(), content_type="image/jpeg")
 	except FileNotFoundError:
-		raise Http404("Avatar file not found")
+		return redirect('/images/default_avatar.jpg')
 	except Exception as e:
 		raise Http404(f"An error occurred: {str(e)}")
 
@@ -293,7 +298,9 @@ class FriendActionsViewSet(viewsets.ViewSet):
 	def fetch_friends(self, request):
 		try:
 			profile = get_object_or_404(Profile.objects.prefetch_related('friends'), user=request.user)
-			serialized_friends = FriendSerializer(profile.friends.all(), many=True, context={'request': request})
+			friends = profile.friends.filter(user__profile__isnull=False)
+
+			serialized_friends = FriendSerializer(friends, many=True, context={'request': request})
 			return Response(serialized_friends.data, status=status.HTTP_200_OK)
 		except Exception as e:
 			logger.error(f"Error fetching friends: {e}")  # 🔍 Log the error
@@ -302,18 +309,27 @@ class FriendActionsViewSet(viewsets.ViewSet):
 
 	@action(detail=False, methods=['post'], url_path='add/(?P<username>[^/.]+)')
 	def send_friend_invite(self, request, username=None):
-		"""Add a friend directly."""
+		"""Send a friend request instead of directly adding a friend."""
 		if username == request.user.username:
 			return Response({'status': 'error', 'message': 'Cannot add yourself.'}, status=status.HTTP_400_BAD_REQUEST)
 
 		friend_user = get_object_or_404(User, username=username)
+		if not hasattr(friend_user, 'profile'):
+			return Response({'status': 'error', 'message': 'User does not have a profile.'}, status=status.HTTP_400_BAD_REQUEST)
+
 		profile = get_object_or_404(Profile, user=request.user)
 
 		if friend_user.profile in profile.friends.all():
 			return Response({'status': 'error', 'message': 'Already friends.'}, status=status.HTTP_400_BAD_REQUEST)
 
-		profile.friends.add(friend_user.profile)
-		return Response({'status': 'success', 'friend': FriendSerializer(friend_user.profile).data}, status=status.HTTP_201_CREATED)
+		if FriendRequest.objects.filter(
+			Q(from_user=request.user, to_user=friend_user) | Q(from_user=friend_user, to_user=request.user)
+		).exists():
+			return Response({'status': 'error', 'message': 'Friend request already exists.'}, status=status.HTTP_400_BAD_REQUEST)
+
+		FriendRequest.objects.create(from_user=request.user, to_user=friend_user)
+
+		return Response({'status': 'success', 'message': 'Friend request sent.'}, status=status.HTTP_201_CREATED)
 
 
 	@action(detail=False, methods=['delete'], url_path='remove/(?P<username>[^/.]+)')
@@ -369,9 +385,9 @@ class FriendRequestViewSet(viewsets.ViewSet):
 		recipient = get_object_or_404(User, username=username)
 
 		if FriendRequest.objects.filter(
-			models.Q(from_user=request.user, to_user=recipient) |
-			models.Q(from_user=recipient, to_user=request.user)
+			Q(from_user=request.user, to_user=recipient) | Q(from_user=recipient, to_user=request.user)
 		).exists():
+
 			return Response(
 				{'status': 'error', 'message': 'Friend request already exists.'},
 				status=status.HTTP_400_BAD_REQUEST

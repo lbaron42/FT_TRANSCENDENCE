@@ -1,8 +1,11 @@
-import { getCSRFToken } from "./auth.js";
 import { gameplay_socket, initGameplaySocket, closeGameplaySocket, customAlert } from "./globals.js";
 
 export function startPacPong(lobby_id, player, player_count, roles, max_score) {
-	console.log("in pac pong");
+	if (player_count == 1)
+		initGameplaySocket(`/ws/gameplay/PacPong/local/${max_score}/${lobby_id}/`)
+	else 
+		initGameplaySocket(`/ws/gameplay/PacPong/${max_score}/${lobby_id}/`)
+
 	let gameSettings = {
 		scoreBoard: document.getElementById('score'),
 		canvas: document.getElementById('game-canvas'),
@@ -24,31 +27,11 @@ export function startPacPong(lobby_id, player, player_count, roles, max_score) {
 		mid_right: false
 	};
 
-	document.querySelectorAll('.online').forEach(content => {
-		content.classList.remove('active');
-	}
-	);
-	document.getElementById('game').classList.add('active');
-
 	const twoD = document.getElementById('2d');
 	const threeD = document.getElementById('3d');
 	twoD.style.display = 'none';
 	threeD.style.display = 'none';
 
-    const csrfToken = getCSRFToken();
-
-	if (player_count == 1)
-		initGameplaySocket(`/ws/gameplay/PacPong/local/${max_score}/${lobby_id}/`)
-	else 
-		initGameplaySocket(`/ws/gameplay/PacPong/${max_score}/${lobby_id}/`)
-
-
-	// Override the send method
-	gameplay_socket.originalSend = gameplay_socket.send;
-	gameplay_socket.send = function (data) {
-	    console.log("Sent: ", data);  // Log the sent message
-	    this.originalSend(data);  // Call the original send method
-	};
 	const encodeState = (player, direction, moving) => {
 		const pacBit = (player == 'p3' ? 1 : 0);  
 		const achsisBit = (direction == 'left' || direction == 'right' ? 1 : 0); 
@@ -149,6 +132,12 @@ export function startPacPong(lobby_id, player, player_count, roles, max_score) {
 		console.log('Gameplay WebSocket open');
 		document.addEventListener('keydown', handleKeyDown);
 		document.addEventListener('keyup', handleKeyUp);
+		document.querySelectorAll('.online').forEach(content => {
+			content.classList.remove('active');
+		}
+		);
+		document.getElementById('game').classList.add('active');
+	
 		gameplay_socket.send(JSON.stringify({
 			type: 'player_joined',
 		  }))
@@ -156,7 +145,6 @@ export function startPacPong(lobby_id, player, player_count, roles, max_score) {
 	
 	gameplay_socket.onmessage = (event) => {
 		const data = JSON.parse(event.data);
-		console.log("Received: " + event.type);
 		if (movementVariables.hasOwnProperty(data.type))
 			movementVariables[data.type] = data.status === 'true';
 		else if (data.type == 'game_update') {
@@ -178,11 +166,11 @@ export function startPacPong(lobby_id, player, player_count, roles, max_score) {
 		else if (data.type == 'game_end') {
 			console.log("game ending...");
 			closeGameplaySocket();
+			customAlert(data.message);
 			document.querySelectorAll('.online').forEach(content => {
 				content.classList.remove('active');
 			}
 			);
-			customAlert(data.message);
 			document.getElementById('lobby').classList.add('active');
 		}
 	};

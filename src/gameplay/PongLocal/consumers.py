@@ -1,7 +1,7 @@
 from channels.generic.websocket import AsyncWebsocketConsumer
 import asyncio, time, json, httpx
-import logging
-logger = logging.getLogger(__name__)
+# import logging
+# logger = logging.getLogger(__name__)
 
 # from multiprocessing.shared_memory import SharedMemory
 # from channels.db import database_sync_to_async
@@ -74,7 +74,7 @@ class PongGameLocal(AsyncWebsocketConsumer):
 		if self.token:
 			async with httpx.AsyncClient() as client:
 				response = await client.get(
-                    "http://nginx:80/user-api/profile/",
+                    "http://userdata:8004/user-api/profile/",
                     headers={
                         'Content-Type': 'application/json',
                         'Authorization': f'Bearer {self.token}',
@@ -191,7 +191,6 @@ class PongGameLocal(AsyncWebsocketConsumer):
 
 	async def pong(self):
 
-		# logger.debug("in pong")
 		await self.send(text_data=json.dumps({
         	'type': 'game_init',
         	'screen_width': str(WIDTH),
@@ -200,20 +199,17 @@ class PongGameLocal(AsyncWebsocketConsumer):
         	'paddle_height': str(PADDLE_HEIGHT),
         	'ball_size': str(BALL_SIZE),
 			}))
-		# logger.debug("settings done")
 		tickrate = 1/120
 		self.game_session.start = int(time.time() * 1000)
 		self.game_session.nonce = int(time.time() * 1000) - self.game_session.start
 		self.game_session.iterationStartT = time.time()
 
 		while self.game_session.player_count == self.game_session.max_player_count:
-			# logger.debug("in loop")
 			duration = time.time() - self.game_session.iterationStartT
 			sleeptime = max(0, tickrate - duration)
 			if sleeptime > 0:
 				await asyncio.sleep(sleeptime)
 			self.game_session.iterationStartT = time.time()
-			# logger.debug("after sleep")
 
 			#increase ball speed in x direction every two passes
 			if self.game_session.passes > 0 and self.game_session.passes % 2 == 0:
@@ -297,7 +293,6 @@ class PongGameLocal(AsyncWebsocketConsumer):
 
 			#update nonce
 			self.game_session.nonce = int(time.time() * 1000) - self.game_session.start
-			# logger.debug("before gameupdate")
 			await self.send(text_data=json.dumps({
 					'type': 'game_update',
 					'nonce': self.game_session.nonce,
@@ -308,10 +303,8 @@ class PongGameLocal(AsyncWebsocketConsumer):
 					'Lscore': self.game_session.Lscore,
 					'Rscore': self.game_session.Rscore,
     			}))
-			# logger.debug("after gameupdate")
 			
 			if self.game_session.Lscore >= self.max_score or self.game_session.Rscore >= self.max_score:
 				await self.send_game_end()
 				break
-			# logger.debug("restarting...")
 		

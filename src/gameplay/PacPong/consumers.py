@@ -1,5 +1,7 @@
 from channels.generic.websocket import AsyncWebsocketConsumer
 import asyncio, time, json, math, httpx
+from django.conf import settings
+
 # import logging
 # logger = logging.getLogger(__name__)
 
@@ -14,8 +16,6 @@ PADDLE_WIDTH = 0.005
 PADDLE_HEIGHT = 0.05
 BALL_SIZE = 0.01
 PAC_SIZE = 0.03
-
-# logger = logging.getLogger(__name__)
 
 class GameSession():
 	def __init__(self):
@@ -89,7 +89,7 @@ class PacPongGame(AsyncWebsocketConsumer):
 		if self.token:
 			async with httpx.AsyncClient() as client:
 				response = await client.get(
-                    "http://nginx:80/user-api/profile/",
+                    "http://userdata:8004/user-api/profile/",
                     headers={
                         'Content-Type': 'application/json',
                         'Authorization': f'Bearer {self.token}',
@@ -237,30 +237,26 @@ class PacPongGame(AsyncWebsocketConsumer):
 			self.game_session.player_count -= 1
 
 			if self.game_session.player_count == 0:
-				# logger.debug("Deleting lobby....")
-				url = f"http://nginx:80/lobby/players/{self.lobby_id}/"
+				url = f"http://lobby_api:8002/lobby/players/{self.lobby_id}/"
 				async with httpx.AsyncClient() as client:
 					response = await client.get(url)
-				# if response.status_code != 200:
-					# logger.debug(f"Failed to get players.")
 				roles = response.json()
-				# logger.debug(roles)
-				url = f"http://nginx:80/user-api/addgame/"
+				url = f"http://userdata:8004/user-api/addgame/"
 				async with httpx.AsyncClient() as client:
 					response = await client.post(url, 
 								json={'gameMode': 'pac-pong',
 				   					'players':[roles['p1'], roles['p2'], roles['p3']],
-									'score': [self.game_session.Lscore, self.game_session.Rscore],
+									'score': [self.game_session.Lscore, self.game_session.Rscore, self.game_session.Pscore],
 				   					},
         	    				headers={
         	    				    'Content-Type': 'application/json',
         	    				    'Authorization': f'Bearer {self.token}',
 									'X-CSRFToken': self.csrf_token,
+									'Microservice-Token' : getattr(settings, "MICROSERVICE_SECRET_TOKEN", None)
+
         	    				},
         	    				cookies=self.cookies
 								)
-				# if response.status_code != 201:
-					# logger.debug(f"Failed to send score")
 				if self.lobby_group_name in self.GameSessions:
 					del self.GameSessions[self.lobby_group_name]
 			else:
@@ -461,7 +457,6 @@ class PacPongGame(AsyncWebsocketConsumer):
 
 			#update nonce
 			self.game_session.nonce = int(time.time() * 1000) - self.game_session.start
-			# logger.debug("in loop before sending")
 			await self.channel_layer.group_send(
         		self.lobby_group_name,
         		{
@@ -478,7 +473,6 @@ class PacPongGame(AsyncWebsocketConsumer):
 					'pac_y': self.game_session.pac[1],
     			},
 			)
-			# logger.debug("in loop after sending")
 			
 			if self.game_session.Lscore >= self.max_score or self.game_session.Rscore >= self.max_score or self.game_session.Pscore >= self.max_score:
 				await self.send_game_end()

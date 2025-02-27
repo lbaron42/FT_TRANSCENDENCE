@@ -2,7 +2,7 @@
 {
     display: flex;
     justify-content: space-between;
-    padding: 30px;
+    padding: 4vh;
     height: 5vh;
     align-items: center;
     border-bottom: 2px solid rgb(253, 248, 229);
@@ -11,6 +11,10 @@
     left: 0;
     width: 100%;
     z-index: 3;
+    background-color: rgb(24, 24, 24);
+}
+.navbar div h1 {
+    cursor: pointer;
 }
 
 .navbar > div:first-of-type

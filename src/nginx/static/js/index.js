@@ -2,15 +2,18 @@ import { showLoginForm, showSignupForm, resetNavigation, loadProfile } from './d
 import { logout, login, signup, getAccessToken } from './auth.js';
 import { refreshAccessToken } from './profile.js';
 import { setName } from './globals.js';
+import { navigateTo } from './routing.js';
+
+document.getElementById('login-button').addEventListener('click', showLoginForm);
+document.getElementById('signup-button').addEventListener('click', showSignupForm);
+document.getElementById('logout-button').addEventListener('click', logout);
+document.getElementById('profile-button').addEventListener('click', () => navigateTo("/profile"));
+document.getElementById('go-back').addEventListener('click', () => navigateTo("/"));
+document.getElementById('settings-button').addEventListener('click', () => navigateTo("/update-profile"));
 
 document.addEventListener('DOMContentLoaded', () => {
     resetNavigation();
     checkAuthentication();
-
-    document.getElementById('login-button').addEventListener('click', showLoginForm);
-    document.getElementById('signup-button').addEventListener('click', showSignupForm);
-    document.getElementById('logout-button').addEventListener('click', logout);
-    document.getElementById('profile-button').addEventListener('click', loadProfile);
 });
 
 const loginForm = document.getElementById('login-form');
@@ -27,7 +30,7 @@ document.getElementById('login-link').addEventListener('click', function() {
     loginForm.classList.add('active');
 });
 
-async function checkAuthentication() {
+export async function checkAuthentication() {
     try {
         const accessToken = getAccessToken();
         if (!accessToken) {
@@ -53,8 +56,9 @@ async function checkAuthentication() {
             document.getElementById('sign-background').classList.remove('active');
             document.getElementById('login-button').style.display = 'none';
             document.getElementById('signup-button').style.display = 'none';
-            document.getElementById('logout-button').style.display = 'inline-block';
-            document.getElementById('profile-button').style.display = 'inline-block';
+            document.getElementById('logout-button').style.display = 'flex';
+            document.getElementById('settings-button').style.display = 'none';
+            document.getElementById('profile-button').style.display = 'flex';
         } else if (response.status === 401) {
             // console.warn("Unauthorized: Trying token refresh...");
             const refreshed = await refreshAccessToken();
@@ -62,10 +66,11 @@ async function checkAuthentication() {
             document.getElementById('sign-background').classList.add('active');
             document.getElementById('sign').classList.add('active');
             document.getElementById('login-form').classList.add('active');
-            document.getElementById('login-button').style.display = 'inline-block';
-            document.getElementById('signup-button').style.display = 'inline-block';
+            document.getElementById('login-button').style.display = 'flex';
             document.getElementById('logout-button').style.display = 'none';
+            document.getElementById('signup-button').style.display = 'flex';
             document.getElementById('profile-button').style.display = 'none';
+            document.getElementById('settings-button').style.display = 'none';
         }
     } catch (error) {
         // console.error('Authentication check failed:', error);

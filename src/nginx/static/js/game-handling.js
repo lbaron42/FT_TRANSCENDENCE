@@ -1,25 +1,29 @@
-import { getCSRFToken } from "./auth.js";
-import { gameplay_socket, initGameplaySocket, closeGameplaySocket } from "./globals.js";
 import { drawGame2d, drawGame3d } from "./drawPongGame.js";
+import { toggle3dButton } from "./game-buttons.js";
+import { gameplay_socket, initGameplaySocket, closeGameplaySocket, customAlert } from "./globals.js";
 
-export function startGame(lobby_id, player, player_count, roles, max_score) {
-  // Use the 2D canvas by default.
-  let gameSettings = {
-    scoreBoard: document.getElementById('score'),
-    canvas: document.getElementById('game-canvas'),
-    contextType: '2d',
-    paddle_width: 0,
-    paddle_height: 0,
-    ball_size: 0,
-    player: player,
-    screen_height_ratio: 0,
-    max_score: max_score
-  };
 
-  // Expose gameSettings globally so the inline module in index.html
-  // can update the canvas and contextType when switching modes.
-  window.gameSettings = gameSettings;
+export function startGame(lobby_id, player, player_count, roles, max_score)
+{
+  if (player_count == 1)
+    initGameplaySocket(`/ws/gameplay/local/${max_score}/${lobby_id}/`);
+  else
+    initGameplaySocket(`/ws/gameplay/${max_score}/${lobby_id}/`);
 
+    let gameSettings = {
+        scoreBoard : document.getElementById('score'),
+        canvas : document.getElementById('game-canvas'),
+        contextType : '3d',
+        paddle_width : 0,
+        paddle_height : 0,
+        ball_size : 0,
+        player : player,
+        screen_height_ratio : 0,
+        max_score: max_score
+    };
+
+    window.gameSettings = gameSettings;
+    
   let movementVariables = {
     left_top: false,
     left_down: false,
@@ -30,27 +34,36 @@ export function startGame(lobby_id, player, player_count, roles, max_score) {
     mid_left: false,
     mid_right: false
   };
+  toggle3dButton();
+    
+    // const twoD = document.getElementById('2d');
+    // const threeD = document.getElementById('3d');
 
-  // Hide other views and show the game view.
-  document.querySelectorAll('.online').forEach(content => {
-    content.classList.remove('active');
-  });
-  document.getElementById('game').classList.add('active');
+    // twoD.addEventListener('click', 
+    //   () => {
+    //   gameSettings.contextType = '2d';
+    //   threeD.classList.remove('active');
+    //   twoD.classList.add('active');
+    //   console.log('2d selected');
+    //   console.log(gameSettings);
+    // });
 
-  // Initialize the WebSocket based on player count.
-  if (player_count == 1)
-    initGameplaySocket(`/ws/gameplay/local/${max_score}/${lobby_id}/`);
-  else
-    initGameplaySocket(`/ws/gameplay/${max_score}/${lobby_id}/`);
+    // threeD.addEventListener('click', 
+    //   () => {
+    //   gameSettings.contextType = '3d';
+    //   twoD.classList.remove('active');
+    //   threeD.classList.add('active');
+    //   console.log('3d selected');
+    //   console.log(gameSettings);
+    // });
 
-  // Helper function to encode state for key events.
-  const encodeState = (player, direction, moving) => {
-    const playerBit = (player == 'p1' ? 0 : 1);
-    const directionBit = (direction == 'up' ? 1 : 0);
-    const movingBit = (moving ? 1 : 0);
-    console.log(((playerBit << 2) | (directionBit << 1) | movingBit));
-    return ((playerBit << 2) | (directionBit << 1) | movingBit);
-  };
+    const encodeState = (player, direction, moving) => {
+      const playerBit = (player == 'p1' ? 0 : 1);
+      const directionBit = (direction == 'up' ? 1 : 0);
+      const movingBit = (moving ? 1 : 0);
+      console.log(((playerBit << 2) | (directionBit << 1) | movingBit));
+      return ((playerBit << 2) | (directionBit << 1) | movingBit);
+    };
 
   // Key event listeners for sending input commands.
   const handleKeyDown = (event) => {
@@ -92,45 +105,58 @@ export function startGame(lobby_id, player, player_count, roles, max_score) {
       gameplay_socket.send(encodeState((player ? player : 'p2'), 'down', 0));
   };
 
-  // WebSocket event handlers.
-  gameplay_socket.onopen = () => {
-    console.log('Gameplay WebSocket open');
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('keyup', handleKeyUp);
-    gameplay_socket.send(JSON.stringify({
-      type: 'player_joined',
-    }));
-  };
+    gameplay_socket.onopen = () => {
+      console.log('Gameplay WebSocket open');
+      document.addEventListener('keydown', handleKeyDown);
+      document.addEventListener('keyup', handleKeyUp);
+      document.querySelectorAll('.online').forEach(content => 
+        {
+          content.classList.remove('active');
+        }
+      );
+    document.getElementById('game').classList.add('active');
+      gameplay_socket.send(JSON.stringify({
+        type: 'player_joined',
+      }))
+    };
 
-  gameplay_socket.onmessage = (event) => {
-    const data = JSON.parse(event.data);
-    console.log(data.type);
-    if (movementVariables.hasOwnProperty(data.type))
-      movementVariables[data.type] = data.status === 'true';
-    else if (data.type == 'game_update')
-      drawGame(data, gameSettings, roles);
-    else if (data.type == 'game_init')
-      initGameSettings(data, gameSettings);
-    else if (data.type == 'player_left') {
-      closeGameplaySocket();
-      console.log("player disconnected");
-      document.querySelectorAll('.online').forEach(content => {
-        content.classList.remove('active');
-      });
-      document.getElementById('lobby').classList.add('active');
-      alert("Player disconnected - returning to lobby.");
-    } else if (data.type == 'game_end') {
-      console.log("game ending...");
-      closeGameplaySocket();
-      document.querySelectorAll('.online').forEach(content => {
-        content.classList.remove('active');
-      });
-      alert(data.message);
-      document.getElementById('lobby').classList.add('active');
+    gameplay_socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      console.log(data.type);
+      if (movementVariables.hasOwnProperty(data.type))
+        movementVariables[data.type] = data.status === 'true';
+      else if (data.type == 'game_update')
+        drawGame(data, gameSettings, roles);
+      else if(data.type == 'game_init')
+        initGameSettings(data, gameSettings);
+      else if(data.type == 'player_left') {
+        closeGameplaySocket();
+        console.log("player disconnected");
+        document.querySelectorAll('.online').forEach(content => 
+          {
+            content.classList.remove('active');
+          }
+        );
+        document.getElementById('lobby').classList.add('active');
+        customAlert("Player disconnected - returning to lobby.");
+      }
+      else if(data.type == 'game_end') {
+        console.log("game ending...");
+        closeGameplaySocket();
+        customAlert(data.message);
+        document.querySelectorAll('.online').forEach(content => 
+          {
+            content.classList.remove('active');
+          }
+        );
+        document.getElementById('lobby').classList.add('active');
+      }
+    };
+
+    gameplay_socket.onerror = () => {
+      history.go(0);
+      customAlert("Session expired. Please Log in again.");
     }
-  };
-
-  gameplay_socket.onerror = console.error;
 
   gameplay_socket.onclose = () => {
     console.log('Gameplay WebSocket closed');
@@ -190,10 +216,12 @@ function drawGame(data, gameSettings, roles) {
   const ballX = normalize(parseInt(data.ball_x), maxX, gameSettings.canvas.width);
   const ballY = normalize(parseInt(data.ball_y), maxY, gameSettings.canvas.height);
 
-  if (gameSettings.contextType == '2d')
+  // Default to 3D unless explicitly set to 2D
+  if (gameSettings.contextType === '2d') {
     drawGame2d(gameSettings, paddleL, paddleR, ballX, ballY);
-  else 
+  } else {
     drawGame3d(gameSettings, paddleL, paddleR, ballX, ballY, gameSettings.max_score);
+  }
 
   if (roles)
     gameSettings.scoreBoard.textContent = `P1 : ${roles.p1} : ${data.Lscore} | ${data.Rscore} : ${roles.p2} : P2`;

@@ -1,9 +1,12 @@
 import { drawGame2d, drawGame3d } from "./drawPongGame.js";
-import { gameplay_socket, lobby_socket, initGameplaySocket, closeGameplaySocket, customAlert } from "./globals.js";
+import { gameplay_socket, lobby_socket, initGameplaySocketTournament, closeGameplaySocket, customAlert } from "./globals.js";
+import { navigateTo } from "./routing.js";
 
 
-export function startTournamentGame(lobby_id, game_id, player, player_count, roles, max_score)
+export function startTournamentGame(lobby_id, game_id, player, roles, max_score, p1, p2, p3, p4, lobby_name)
 {
+  
+  initGameplaySocketTournament(`/ws/gameplay/${max_score}/${lobby_id}/`, p1, p2, p3, p4, lobby_name);
     let gameSettings = {
         scoreBoard : document.getElementById('score'),
         canvas : document.getElementById('game-canvas'),
@@ -25,13 +28,7 @@ export function startTournamentGame(lobby_id, game_id, player, player_count, rol
       mid_left: false,
       mid_right: false
     };
-
-    document.querySelectorAll('.online').forEach(content => 
-        {
-          content.classList.remove('active');
-        }
-      );
-    document.getElementById('game').classList.add('active');
+    
 
     const twoD = document.getElementById('2d');
     const threeD = document.getElementById('3d');
@@ -53,8 +50,6 @@ export function startTournamentGame(lobby_id, game_id, player, player_count, rol
       console.log('3d selected');
       console.log(gameSettings);
     });
-
-    initGameplaySocket(`/ws/gameplay/${max_score}/${lobby_id}/`);
 
     const encodeState = (player, direction, moving) => {
       const playerBit = (player == 'p1' ? 0 : 1);
@@ -98,6 +93,12 @@ export function startTournamentGame(lobby_id, game_id, player, player_count, rol
       console.log('Gameplay WebSocket open');
       document.addEventListener('keydown', handleKeyDown);
       document.addEventListener('keyup', handleKeyUp);
+    document.querySelectorAll('.online').forEach(content => 
+        {
+          content.classList.remove('active');
+        }
+      );
+    document.getElementById('game').classList.add('active');
       gameplay_socket.send(JSON.stringify({
         type: 'player_joined',
       }))
@@ -125,12 +126,12 @@ export function startTournamentGame(lobby_id, game_id, player, player_count, rol
       else if(data.type == 'game_end') {
         console.log("game ending...");
         closeGameplaySocket();
+        customAlert(data.message);
         document.querySelectorAll('.online').forEach(content => 
           {
             content.classList.remove('active');
           }
         );
-        customAlert(data.message);
         document.getElementById('tournament').classList.add('active');
         const message = {
         	action : 'game_end',
