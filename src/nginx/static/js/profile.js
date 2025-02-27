@@ -10,6 +10,9 @@ export function loadProfile() {
 	loadAvatar();
 	displayMatchHistory('two-player-pong');
 	fetchPendingRequests();
+
+    setInterval(fetchFriends, 10000);
+
 	// }
     // const logoutButton = document.getElementById('logout-button');
     // if (logoutButton) logoutButton.addEventListener('click', logout);
@@ -41,8 +44,8 @@ export function loadProfile() {
     const tabs = document.querySelectorAll(".game-tab");
     tabs.forEach(tab => {
         tab.addEventListener("click", () => {
-            tabs.forEach(t => t.classList.remove("active")); // Remove active class
-            tab.classList.add("active"); // Set active tab
+            tabs.forEach(t => t.classList.remove("active"));
+            tab.classList.add("active");
 
             const selectedGameMode = tab.getAttribute("data-game");
             displayMatchHistory(selectedGameMode);
@@ -118,7 +121,11 @@ function fetchProfileData() {
             twoFAToggle.checked = !!data.twoFA_active;
             twoFAStatus.textContent = data.twoFA_active ? "Enabled" : "Disabled";
         }
-
+        const onlineStatusElement = document.getElementById('online-status');
+        if (onlineStatusElement) {
+            onlineStatusElement.textContent = data.online_status ? "🟢 Online" : "🔴 Offline";
+            onlineStatusElement.style.color = data.online_status ? "green" : "red";
+        }
         // Game statistics
         const stats = data['stats']
         document.getElementById('games-played').textContent = stats['total']['games-played'] ?? "-";
@@ -141,7 +148,6 @@ async function loadAvatar() {
 		const response = await fetch('/user-api/download-avatar/', {
         method: 'GET',
         headers: {
-            'Content-Type': 'application/json',
             'Authorization': `Bearer ${accessToken}`,
         },
         credentials: 'include',
@@ -153,6 +159,49 @@ async function loadAvatar() {
     } catch (error){
 		document.getElementById('avatar').src = './images/default_avatar.jpg';
 	}
+}
+
+async function uploadAvatar(event) {
+    const file = event.target.files[0];
+    if (!file) {
+        alert('No file selected.');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    const accessToken = getAccessToken();
+
+    try {
+        let response = await fetch('/user-api/upload-avatar/', {
+            method: 'POST',
+            body: formData,
+            credentials: 'include',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'X-CSRFToken': getCSRFToken()
+            }
+        });
+
+        if (response.status === 401) {
+            // console.warn("Unauthorized. Refreshing token...");
+            const refreshed = await refreshAccessToken();
+            if (refreshed) return uploadAvatar(event);
+        }
+
+        const data = await response.json();
+
+        if (data.message) {
+            loadAvatar();
+            alert('Avatar uploaded successfully!');
+        } else {
+            throw new Error(data.error || 'Failed to upload avatar');
+        }
+    } catch (error) {
+        // console.error('Error uploading avatar:', error);
+        alert(error.message);
+    }
 }
 
 async function toggle2FA(event) {
@@ -190,7 +239,6 @@ async function toggle2FA(event) {
         alert("Error updating 2FA.");
     }
 }
-
 
 async function fetchFriends() {
     const accessToken = getAccessToken();
@@ -265,7 +313,6 @@ function displayFriends(friends) {
     });
 }
 
-
 async function addFriend() {
     const friendUsername = document.getElementById('friend-username').value.trim();
     if (!friendUsername) {
@@ -275,12 +322,11 @@ async function addFriend() {
 
     const accessToken = getAccessToken();
     if (!accessToken) {
-        // console.warn("No access token found.");
         return;
     }
 
     try {
-        let response = await fetch(`/user-api/friends/add/${friendUsername}/`, {
+        let response = await fetch(`/user-api/friend-requests/request/${friendUsername}/`, { // FIX: use correct endpoint
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -291,20 +337,45 @@ async function addFriend() {
         });
 
         if (response.status === 401) {
-            // console.warn("Unauthorized. Refreshing token...");
             const refreshed = await refreshAccessToken();
-            if (refreshed) return addFriend(); // Retry
+            if (refreshed) return addFriend();
         }
 
         const data = await response.json();
         if (response.ok) {
-            alert(`${friendUsername} has been added.`);
-            fetchFriends();
+            alert(`Friend request sent to ${friendUsername}.`);
+            fetchPendingRequests();
         } else {
-            throw new Error(data.message || 'Failed to add friend.');
+            throw new Error(data.message || 'Failed to send friend request.');
         }
     } catch (error) {
-        // console.error(error);
+        alert(error.message);
+    }
+}
+
+async function acceptFriendRequest(requestId) {
+    const accessToken = getAccessToken();
+    if (!accessToken) {
+        alert("No access token found.");
+        return;
+    }
+
+    try {
+        const response = await fetch(`/user-api/friend-requests/accept/${requestId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`,
+                'X-CSRFToken': getCSRFToken(),
+            },
+            credentials: 'include',
+        });
+
+        if (!response.ok) throw new Error('Failed to accept friend request.');
+
+        alert('Friend request accepted.');
+        fetchPendingRequests();
+    } catch (error) {
         alert(error.message);
     }
 }
@@ -348,7 +419,6 @@ async function removeFriend(username) {
     }
 }
 
-
 async function blockFriend(username) {
     if (!confirm(`Are you sure you want to block ${username}? This action cannot be undone.`)) return;
 
@@ -357,7 +427,6 @@ async function blockFriend(username) {
         // console.warn("No access token found.");
         return;
     }
-
     try {
         const response = await fetch(`/user-api/block-user/${username}/`, {
             method: 'POST',
@@ -382,45 +451,29 @@ async function blockFriend(username) {
     }
 }
 
-async function uploadAvatar(event) {
-    const file = event.target.files[0];
-    if (!file) {
-        alert('No file selected.');
+async function declineFriendRequest(requestId) {
+    const accessToken = getAccessToken();
+    if (!accessToken) {
+        // console.warn("No access token found.");
         return;
     }
-
-    const formData = new FormData();
-    formData.append('avatar', file);
-
-    const accessToken = getAccessToken();
-
     try {
-        let response = await fetch('/user-api/upload-avatar/', {
+        const response = await fetch(`/user-api/friend-requests/decline/${requestId}/`, {
             method: 'POST',
-            body: formData,
-            credentials: 'include',
             headers: {
+                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${accessToken}`,
-                'X-CSRFToken': getCSRFToken()
-            }
+                'X-CSRFToken': getCSRFToken(),
+            },
+            credentials: 'include',
         });
 
-        if (response.status === 401) {
-            // console.warn("Unauthorized. Refreshing token...");
-            const refreshed = await refreshAccessToken();
-            if (refreshed) return uploadAvatar(event);
-        }
+        if (!response.ok) throw new Error('Failed to decline friend request.');
 
-        const data = await response.json();
-
-        if (data.message) {
-            loadAvatar();
-            alert('Avatar uploaded successfully!');
-        } else {
-            throw new Error(data.error || 'Failed to upload avatar');
-        }
+        alert('Friend request declined.');
+        fetchPendingRequests();
     } catch (error) {
-        // console.error('Error uploading avatar:', error);
+        // console.error(error);
         alert(error.message);
     }
 }
@@ -444,7 +497,6 @@ async function fetchPendingRequests() {
         });
 
         if (response.status === 401) {
-            // console.warn("Unauthorized. Refreshing token...");
             const refreshed = await refreshAccessToken();
             if (refreshed) return fetchPendingRequests();
         }
@@ -453,7 +505,6 @@ async function fetchPendingRequests() {
 
         const data = await response.json();
         if (!data.pending_requests || data.pending_requests.length === 0) {
-            // console.warn("No pending friend requests.");
             document.getElementById('pending-requests').innerHTML = '<p>No pending requests.</p>';
             return;
         }
@@ -461,34 +512,6 @@ async function fetchPendingRequests() {
         displayPendingRequests(data.pending_requests);
     } catch (error) {
         // console.error(error);
-    }
-}
-
-async function declineFriendRequest(requestId) {
-    const accessToken = getAccessToken();
-    if (!accessToken) {
-        // console.warn("No access token found.");
-        return;
-    }
-
-    try {
-        const response = await fetch(`/user-api/friend-requests/decline/${requestId}/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${accessToken}`,
-                'X-CSRFToken': getCSRFToken(),
-            },
-            credentials: 'include',
-        });
-
-        if (!response.ok) throw new Error('Failed to decline friend request.');
-
-        alert('Friend request declined.');
-        fetchPendingRequests();
-    } catch (error) {
-        // console.error(error);
-        alert(error.message);
     }
 }
 
@@ -505,23 +528,23 @@ function displayPendingRequests(requests) {
         const requestItem = document.createElement('li');
         requestItem.innerHTML = `
             ${request.from_user}
-            <button onclick="acceptFriendRequest(${request.id})">Accept</button>
-            <button onclick="declineFriendRequest(${request.id})">Decline</button>
+            <button class="accept-btn" data-id="${request.id}">Accept</button>
+            <button class="decline-btn" data-id="${request.id}">Decline</button>
         `;
         requestsList.appendChild(requestItem);
     });
 
-     document.querySelectorAll('.accept-btn').forEach(button => {
+    document.querySelectorAll('.accept-btn').forEach(button => {
         button.addEventListener('click', function () {
-            acceptFriendRequest(this.getAttribute('data-id'));
+            const requestId = this.getAttribute('data-id');
+            acceptFriendRequest(requestId);
         });
     });
 
     document.querySelectorAll('.decline-btn').forEach(button => {
         button.addEventListener('click', function () {
-            declineFriendRequest(this.getAttribute('data-id'));
+            const requestId = this.getAttribute('data-id');
+            declineFriendRequest(requestId);
         });
     });
 }
-
-

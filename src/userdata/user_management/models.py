@@ -25,6 +25,7 @@ class Profile(models.Model):
     friends = models.ManyToManyField("self", blank=True, symmetrical=True)
     stats = models.JSONField(default=defaultStats)
     twoFA_active = models.BooleanField(default=False)
+    online_status = models.BooleanField(default=False)
 
     def __str__(self):
         return self.user.username

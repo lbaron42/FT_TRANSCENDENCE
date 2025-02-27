@@ -13,7 +13,7 @@ export function startGame(lobby_id, player, player_count, roles, max_score)
     let gameSettings = {
         scoreBoard : document.getElementById('score'),
         canvas : document.getElementById('game-canvas'),
-        contextType : '2d',
+        contextType : '3d',
         paddle_width : 0,
         paddle_height : 0,
         ball_size : 0,
@@ -126,7 +126,7 @@ export function startGame(lobby_id, player, player_count, roles, max_score)
       if (movementVariables.hasOwnProperty(data.type))
         movementVariables[data.type] = data.status === 'true';
       else if (data.type == 'game_update')
-        drawGame(data, gameSettings, roles, '2d');
+        drawGame(data, gameSettings, roles);
       else if(data.type == 'game_init')
         initGameSettings(data, gameSettings);
       else if(data.type == 'player_left') {
@@ -216,10 +216,12 @@ function drawGame(data, gameSettings, roles) {
   const ballX = normalize(parseInt(data.ball_x), maxX, gameSettings.canvas.width);
   const ballY = normalize(parseInt(data.ball_y), maxY, gameSettings.canvas.height);
 
-  if (gameSettings.contextType == '2d')
+  // Default to 3D unless explicitly set to 2D
+  if (gameSettings.contextType === '2d') {
     drawGame2d(gameSettings, paddleL, paddleR, ballX, ballY);
-  else 
+  } else {
     drawGame3d(gameSettings, paddleL, paddleR, ballX, ballY, gameSettings.max_score);
+  }
 
   if (roles)
     gameSettings.scoreBoard.textContent = `P1 : ${roles.p1} : ${data.Lscore} | ${data.Rscore} : ${roles.p2} : P2`;
