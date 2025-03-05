@@ -197,9 +197,5 @@ function drawGame(data, gameSettings, roles) {
   } else {
     drawGame3d(gameSettings, paddleL, paddleR, ballX, ballY, gameSettings.max_score);
   }
-
-  if (roles)
-    gameSettings.scoreBoard.textContent = `P1 : ${roles.p1} : ${data.Lscore} | ${data.Rscore} : ${roles.p2} : P2`;
-  else
-    gameSettings.scoreBoard.textContent = `P1 : ${data.Lscore} | ${data.Rscore} : P2`;
+  gameSettings.scoreBoard.textContent = `P1 : ${data.Lscore} | ${data.Rscore} : P2`;
 }
