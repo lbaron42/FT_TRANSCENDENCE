@@ -100,7 +100,7 @@ export function joinLobby()
               p2.innerHTML = `<p>P2</p>`
           }
 
-          if (roles.p3 != "None" && window.pac_pong) {
+          if (roles.p3 != "None" && window.pac_pong && window.max_player_count != 1) {
               p3.classList.add('player_selected');
               p3.innerHTML = `<p>PacPong</p>${roles.p3}`
         } else if (window.pac_pong) {

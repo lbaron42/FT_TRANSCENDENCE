@@ -51,8 +51,7 @@ export const Profile = () => `
             <div id="game-tabs">
                 <button class="game-tab active" data-game="two-player-pong">Pong</button>
                 <button class="game-tab" data-game="pac-pong">PacPong</button>
-                <button class="game-tab" data-game="four-player-tournament">Tournament</button>
-            </div>
+                </div>
             <table id="match-history-table">
                 <thead id="match-history-head">
                     <!-- Table headers will be inserted dynamically -->
@@ -61,6 +60,8 @@ export const Profile = () => `
             </table>
         </section>
       </div>`;
+    // <button class="game-tab" data-game="four-player-tournament">Tournament</button>
+
 
 export const UpdateProfile = () => 
   `<form id="update-form">

@@ -294,8 +294,8 @@ function displayFriends(friends) {
                 ${friend.online_status ? 'Online' : 'Offline'}
             </span>
             <button class="remove-friend-btn" data-username="${friend.username}">Remove</button>
-            <button class="block-friend-btn" data-username="${friend.username}">Block</button>
-        `;
+            `;
+            // <button class="block-friend-btn" data-username="${friend.username}">Block</button>
 
         friendsList.appendChild(friendItem);
     });
@@ -306,11 +306,11 @@ function displayFriends(friends) {
         });
     });
 
-    document.querySelectorAll('.block-friend-btn').forEach(button => {
-        button.addEventListener('click', function () {
-            blockFriend(this.getAttribute('data-username'));
-        });
-    });
+    // document.querySelectorAll('.block-friend-btn').forEach(button => {
+    //     button.addEventListener('click', function () {
+    //         blockFriend(this.getAttribute('data-username'));
+    //     });
+    // });
 }
 
 async function addFriend() {

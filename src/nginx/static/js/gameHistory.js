@@ -43,9 +43,9 @@ export async function displayMatchHistory(gameMode) {
             case 'pac-pong':
                 genPacPongTableBody(games, matchHistoryBody);
                 break;
-            case 'four-player-tournament':
-                genTournamentTableBody(games, matchHistoryBody);
-                break;
+            // case 'four-player-tournament':
+            //     genTournamentTableBody(games, matchHistoryBody);
+            //     break;
         }
     } catch (error) {
         console.error(error.message);
@@ -76,7 +76,7 @@ async function displayMatchHistoryHead(gameMode) {
     const tableHeaders = {
         "two-player-pong": ["Date", "Opponent", "Score", "Result"],
         "pac-pong": ["Date", "Left", "Right", "Pacman", "Score (L-R-P)", "Result"],
-        "four-player-tournament": ["Date", "Name", "Winner", "Second", "Result"]
+        // "four-player-tournament": ["Date", "Name", "Winner", "Second", "Result"]
     };
     const matchHistoryHead = document.getElementById("match-history-head");
     matchHistoryHead.innerHTML = "";

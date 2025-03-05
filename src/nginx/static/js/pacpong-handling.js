@@ -246,10 +246,7 @@ function drawGame(data, gameSettings, roles) {
 	drawGame2d(gameSettings, paddleL, paddleR, ballX, ballY, pacX, pacY);
 
 	// Update score
-	if (roles)
-		gameSettings.scoreBoard.textContent = `P1 : ${roles.p1} : ${data.Lscore} | PacMan : ${roles.p3} : ${data.Pscore} | P2 : ${roles.p2} : ${data.Rscore}`;
-	else
-		gameSettings.scoreBoard.textContent = `P1 : ${data.Lscore} | PacMan : ${data.Pscore} | P2 : ${data.Rscore}`;
+	gameSettings.scoreBoard.textContent = `P1 : ${data.Lscore} | PacMan : ${data.Pscore} | P2 : ${data.Rscore}`;
 }
 
 function drawGame2d(gameSettings, paddleL, paddleR, ballX, ballY, pacX, pacY) {

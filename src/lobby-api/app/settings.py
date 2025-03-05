@@ -25,7 +25,7 @@ SECRET_KEY = os.environ["LOBBY_API_SECRET_KEY"]
 # SECURITY WARNING: don't run with debug turned on in production!
 # DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1", 'lobby_api', 'lobby_websocket', 'gameplay', 'nginx']
+ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1", 'lobby_api', 'lobby_websocket', 'gameplay', 'nginx', '10.15.206.6']
 
 
 # Application definition
